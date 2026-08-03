@@ -1,0 +1,76 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: indicators-service
+    url: http://indicators-service:8080
+    routes:
+      - name: indicadores-epidemiologicos
+        paths: ["/api/indicadores/epidemiologicos"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: indicadores-climaticos
+        paths: ["/api/indicadores/climaticos"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: vulnerabilidade
+        paths: ["/api/vulnerabilidade"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: alertas
+        paths: ["/api/alertas"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: municipios
+        paths: ["/api/municipios"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: gats
+        paths: ["/api/gats"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: pesquisadores
+        paths: ["/api/pesquisadores"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+      - name: dashboard-kpis
+        paths: ["/api/dashboard/kpis"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+
+  - name: import-service
+    url: http://import-service:8081
+    routes:
+      - name: import-sessions
+        paths: ["/api/import/sessions"]
+        methods: ["POST", "OPTIONS"]
+        strip_path: false
+      - name: import-sessions-detail
+        paths: ["/api/import/sessions/(.+)"]
+        methods: ["GET", "POST", "OPTIONS"]
+        strip_path: false
+      - name: import-datasets-detail
+        paths: ["/api/import/datasets/(.+)"]
+        methods: ["GET", "POST", "OPTIONS"]
+        strip_path: false
+
+  - name: search-service
+    url: http://search-service:8080
+    routes:
+      - name: search
+        paths: ["/api/search"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
+
+plugins:
+  - name: cors
+    config:
+      origins: ["*"]
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      headers: ["Accept", "Content-Type", "Authorization"]
+      max_age: 3600
+
+  - name: rate-limiting
+    config:
+      minute: 120
+      policy: local
