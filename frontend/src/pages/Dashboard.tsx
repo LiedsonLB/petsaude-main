@@ -1,10 +1,10 @@
-import { BarChart2, Bell, Map, ShieldAlert, TrendingUp, TrendingDown, Calendar, Download, RefreshCw, Thermometer, Droplets, Monitor, ChevronDown, Check } from 'lucide-react';
+import { Bell, Map, TrendingUp, TrendingDown, Calendar, Download, RefreshCw, Thermometer, Droplets, Monitor, ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Legend, LineChart, Line,
 } from 'recharts';
-import { alertsData, kpiData, monthlyData, municipiosRisco, vulnerabilityData } from '../data/Data';
+import { alertsData, kpiData, monthlyData, municipiosRisco } from '../data/Data';
 import { useTheme } from '../contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
 import Topbar from '../components/Topbar';
@@ -1164,7 +1164,7 @@ export default function Dashboard() {
                                                 padding: '16px 24px',
                                                 fontWeight: 500,
                                                 color: '#181c1c',
-                                            }}>{m.temp || '32.5°C'}</td>
+                                            }}>{'32.5°C'}</td>
                                             <td style={{ padding: '16px 24px' }}>
                                                 <span style={{
                                                     display: 'inline-flex',
@@ -1194,7 +1194,7 @@ export default function Dashboard() {
                                                 padding: '16px 24px',
                                                 color: '#3e4947',
                                                 fontSize: '13px',
-                                            }}>{m.atualizacao || '10 min atrás'}</td>
+                                            }}>{'10 min atrás'}</td>
                                             <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                                                 <button style={{
                                                     padding: '6px',
