@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, User, Mail, Lock, Calendar, Phone, FileText, Building } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Cloud, Mail, Lock, Eye, EyeOff, ArrowRight,
+  User, Building2, GraduationCap, Users, ClipboardCheck, ChevronDown
+} from 'lucide-react';
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -12,12 +15,30 @@ export default function Cadastro() {
     nome: '',
     email: '',
     cpf: '',
-    phone: '',
-    dataNasc: '',
-    instituicao: 'UESPI',
+    instituicao: '',
+    curso: '',
+    perfil: '',
     senha: '',
-    confirmSenha: ''
+    confirmSenha: '',
   });
+
+  const onlyDigits = (v: string) => v.replace(/\D/g, '');
+  const formatCPF = (digits: string) => {
+    const v = onlyDigits(digits).slice(0, 11);
+    if (!v) return '';
+    if (v.length <= 3) return v;
+    if (v.length <= 6) return `${v.slice(0, 3)}.${v.slice(3)}`;
+    if (v.length <= 9) return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6)}`;
+    return `${v.slice(0, 3)}.${v.slice(3, 6)}.${v.slice(6, 9)}-${v.slice(9)}`;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'cpf' ? formatCPF(value) : value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,333 +57,218 @@ export default function Cadastro() {
     }, 1500);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const onlyDigits = (value: string) => value.replace(/\D/g, '');
-  
-  const formatCPF = (digits: string) => {
-    const v = onlyDigits(digits).slice(0, 11);
-    if (!v) return '';
-    if (v.length <= 3) return v;
-    if (v.length <= 6) return `${v.slice(0,3)}.${v.slice(3)}`;
-    if (v.length <= 9) return `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6)}`;
-    return `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6,9)}-${v.slice(9)}`;
-  };
-
-  const formatPhone = (digits: string) => {
-    const v = onlyDigits(digits).slice(0, 11);
-    if (!v) return '';
-    if (v.length <= 2) return `(${v}`;
-    if (v.length <= 7) return `(${v.slice(0,2)}) ${v.slice(2)}`;
-    return `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
-  };
-
-  const inputStyle = {
-    width: '100%',
-    height: '48px',
-    padding: '0 16px',
-    borderRadius: '10px',
-    border: '1px solid #d0d9d6',
-    backgroundColor: '#f8faf8',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: '14px',
-    color: '#1a2a2a',
-    outline: 'none',
-    transition: 'border-color 0.2s',
-  };
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px',
-      backgroundColor: '#f5faf8',
-      backgroundImage: 'radial-gradient(at 0% 0%, rgba(37,99,235,0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(37,99,235,0.05) 0px, transparent 50%)',
-    }}>
-      <div style={{ maxWidth: '480px', width: '100%' }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 12px',
-          }}>
-            <img src="petsaudeclima_icon.png" alt="Logo" style={{ width: '100px', height: '70px' }} />
+    <div className="min-h-screen flex bg-[#f7faf8] text-[#181c1c] font-['Inter'] selection:bg-[#004e47]/20 selection:text-[#004e47] overflow-hidden relative">
+      {/* Painel esquerdo */}
+      <section className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden p-12 flex-col justify-between hero-gradient">
+        <img
+          src="petsaudeclima_hero.png"
+          alt="Piauí Landscape"
+          className="auth-hero-image"
+        />
+        <div className="hero-overlay" />
+        <div className="hero-overlay-bottom" />
+
+        <div className="auth-hero-content">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
+              <Cloud size={28} className="text-white" />
+            </div>
+            <div>
+              <div className="text-[22px] font-bold text-white tracking-tight">PET-Saúde Clima</div>
+              <div className="text-[12px] text-white/70 uppercase tracking-[0.1em]">Territórios do Piauí</div>
+            </div>
           </div>
-          <h1 style={{
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '24px',
-            fontWeight: 700,
-            color: '#1a2a2a',
-            marginBottom: '4px',
-          }}>
-            Criar Conta
-          </h1>
-          <p style={{
-            fontSize: '14px',
-            color: '#5c6e6a',
-          }}>
-            Faça parte do PET-Saúde: Clima
+        </div>
+
+        <div className="auth-hero-content max-w-md">
+          <h2 className="text-[34px] font-bold text-white leading-tight mb-4">
+            Dados que informam. Ciência que transforma.
+          </h2>
+          <p className="text-[16px] text-white/85 leading-relaxed font-light">
+            Junte-se à maior rede de monitoramento de saúde ambiental do Piauí. Contribua para pesquisas que salvam vidas através da análise climática.
           </p>
         </div>
 
-        {/* Card */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '28px',
-          border: '1px solid #e0e8e5',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-        }}>
-          <form onSubmit={handleSubmit}>
-            {/* Nome */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '11px',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: '#5c6e6a',
-                marginBottom: '4px',
-              }}>
-                <User size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                Nome Completo
-              </label>
-              <input
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                required
-                placeholder="Seu nome completo"
-                style={inputStyle}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
-              />
+        <div className="auth-hero-content flex gap-8">
+          <div>
+            <div className="text-[24px] font-bold text-primary">224</div>
+            <div className="text-[12px] text-primary/70">Municípios Monitorados</div>
+          </div>
+          <div className="auth-stats-divider" />
+          <div>
+            <div className="text-[24px] font-bold text-primary">15+</div>
+            <div className="text-[12px] text-primary/70">Instituições Parceiras</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Painel direito: formulário */}
+      <main className="flex-1 flex flex-col items-center justify-around p-6 mesh-gradient min-h-screen">
+        <div className="w-full max-w-lg">
+          <div className="flex items-center gap-2 mb-6 lg:hidden">
+            <div className="w-9 h-9 rounded-xl bg-[#004e47]/10 flex items-center justify-center">
+              <Cloud size={24} className="text-[#004e47]" />
+            </div>
+            <div>
+              <div className="text-[18px] font-bold text-[#004e47]">PET-Saúde Clima</div>
+              <div className="text-[10px] text-[#6e7977] uppercase tracking-wider">Monitoramento Socioambiental</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 mb-6">
+            <img
+              src="petsaudeclima_icon.png"
+              alt="PET-Saúde Clima Logo"
+              className="h-16 w-auto"
+            />
+            <div className="">
+              <h2 className="text-[28px] font-bold text-[#004e47] mb-1">Criar Conta</h2>
+              <p className="text-[#3e4947] text-[15px] font-light">Preencha os dados abaixo para acessar a plataforma.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">Nome completo</label>
+              <div className="relative">
+                <User size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  name="nome"
+                  type="text"
+                  required
+                  placeholder="Seu nome completo"
+                  value={formData.nome}
+                  onChange={handleChange}
+                  className="auth-input w-full pl-10"
+                />
+              </div>
             </div>
 
-            {/* Email */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '11px',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: '#5c6e6a',
-                marginBottom: '4px',
-              }}>
-                <Mail size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                E-mail
-              </label>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="seu@email.com"
-                style={inputStyle}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
-              />
-            </div>
-
-            {/* CPF e Telefone */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: '#5c6e6a',
-                  marginBottom: '4px',
-                }}>
-                  <FileText size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                  CPF
-                </label>
+                <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">CPF</label>
                 <input
                   name="cpf"
-                  value={formatCPF(formData.cpf)}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cpf: onlyDigits(e.target.value).slice(0, 11) }))}
+                  type="text"
                   required
                   placeholder="000.000.000-00"
-                  style={inputStyle}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
+                  value={formData.cpf}
+                  onChange={handleChange}
+                  className="auth-input w-full"
                 />
               </div>
               <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: '#5c6e6a',
-                  marginBottom: '4px',
-                }}>
-                  <Phone size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                  Telefone
-                </label>
-                <input
-                  name="phone"
-                  value={formatPhone(formData.phone)}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: onlyDigits(e.target.value).slice(0, 13) }))}
-                  required
-                  placeholder="(00) 00000-0000"
-                  style={inputStyle}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
-                />
+                <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">E-mail</label>
+                <div className="relative">
+                  <Mail size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="seu@email.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="auth-input w-full pl-10"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Data Nascimento e Instituição */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: '#5c6e6a',
-                  marginBottom: '4px',
-                }}>
-                  <Calendar size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                  Data Nasc.
-                </label>
-                <input
-                  name="dataNasc"
-                  type="date"
-                  value={formData.dataNasc}
-                  onChange={handleChange}
-                  required
-                  style={inputStyle}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
-                />
+                <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">Instituição</label>
+                <div className="relative">
+                  <Building2 size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    name="instituicao"
+                    type="text"
+                    required
+                    placeholder="Ex: UFPI, UESPI..."
+                    value={formData.instituicao}
+                    onChange={handleChange}
+                    className="auth-input w-full pl-10"
+                  />
+                </div>
               </div>
               <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: '#5c6e6a',
-                  marginBottom: '4px',
-                }}>
-                  <Building size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                  Instituição
-                </label>
-                <input
-                  name="instituicao"
-                  value={formData.instituicao}
-                  onChange={handleChange}
-                  required
-                  placeholder="UESPI"
-                  style={inputStyle}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
-                />
+                <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">Curso</label>
+                <div className="relative">
+                  <GraduationCap size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    name="curso"
+                    type="text"
+                    required
+                    placeholder="Ex: Medicina, Geografia..."
+                    value={formData.curso}
+                    onChange={handleChange}
+                    className="auth-input w-full pl-10"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Senha e Confirmar Senha */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">Perfil</label>
+              <div className="relative">
+                <Users size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
+                <select
+                  name="perfil"
+                  required
+                  value={formData.perfil}
+                  onChange={handleChange}
+                  className="auth-input w-full pl-10 appearance-none"
+                >
+                  <option value="" disabled>Selecione seu perfil</option>
+                  <option value="pesquisador">Pesquisador</option>
+                  <option value="estudante">Estudante / Bolsista</option>
+                  <option value="gestor">Gestor Público</option>
+                  <option value="comunidade">Membro da Comunidade</option>
+                </select>
+                <ChevronDown size={18} className="text-[#3e4947]/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: '#5c6e6a',
-                  marginBottom: '4px',
-                }}>
-                  <Lock size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                  Senha
-                </label>
-                <div style={{ position: 'relative' }}>
+                <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">Senha</label>
+                <div className="relative">
+                  <Lock size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     name="senha"
                     type={showPassword ? 'text' : 'password'}
-                    value={formData.senha}
-                    onChange={handleChange}
                     required
                     placeholder="••••••••"
-                    style={inputStyle}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
+                    value={formData.senha}
+                    onChange={handleChange}
+                    className="auth-input w-full pl-10 pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      color: '#8f9f9b',
-                      cursor: 'pointer',
-                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3e4947]/60 hover:text-[#181c1c] transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
               <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: '#5c6e6a',
-                  marginBottom: '4px',
-                }}>
-                  <Lock size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                  Confirmar
-                </label>
-                <div style={{ position: 'relative' }}>
+                <label className="block text-xs font-semibold text-[#3e4947] mb-1.5">Confirmar senha</label>
+                <div className="relative">
+                  <ClipboardCheck size={18} className="text-[#3e4947]/60 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     name="confirmSenha"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmSenha}
-                    onChange={handleChange}
                     required
                     placeholder="••••••••"
-                    style={inputStyle}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#d0d9d6'}
+                    value={formData.confirmSenha}
+                    onChange={handleChange}
+                    className="auth-input w-full pl-10 pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      color: '#8f9f9b',
-                      cursor: 'pointer',
-                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3e4947]/60 hover:text-[#181c1c] transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -370,86 +276,53 @@ export default function Cadastro() {
               </div>
             </div>
 
-            {/* Termos */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '20px' }}>
+            <label className="flex items-start gap-2.5 cursor-pointer">
               <input
-                id="terms"
                 type="checkbox"
                 checked={acceptTerms}
                 onChange={(e) => setAcceptTerms(e.target.checked)}
-                style={{
-                  marginTop: '2px',
-                  accentColor: '#2563eb',
-                  width: '16px',
-                  height: '16px',
-                  cursor: 'pointer',
-                }}
+                className="accent-primary mt-0.5"
               />
-              <label htmlFor="terms" style={{
-                fontSize: '13px',
-                color: '#5c6e6a',
-                cursor: 'pointer',
-              }}>
-                Concordo com os{' '}
-                <a href="#" style={{ fontWeight: 600, color: '#2563eb', textDecoration: 'none' }}>
-                  Termos de Serviço
-                </a>{' '}
-                e{' '}
-                <a href="#" style={{ fontWeight: 600, color: '#2563eb', textDecoration: 'none' }}>
-                  Política de Privacidade
-                </a>
-              </label>
-            </div>
+              <span className="text-xs text-[#3e4947]">
+                Eu li e concordo com os <Link to="#" className="text-[#004e47] font-semibold hover:underline">Termos de Uso</Link> e a{' '}
+                <Link to="#" className="text-[#004e47] font-semibold hover:underline">Política de Privacidade</Link> da rede PET-Saúde.
+              </span>
+            </label>
 
-            {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading || !acceptTerms}
-              style={{
-                width: '100%',
-                height: '48px',
-                borderRadius: '10px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                color: 'white',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-                opacity: (isLoading || !acceptTerms) ? 0.5 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!isLoading && acceptTerms) e.currentTarget.style.opacity = '0.9';
-              }}
-              onMouseLeave={(e) => {
-                if (!isLoading && acceptTerms) e.currentTarget.style.opacity = '1';
-              }}
+              disabled={isLoading}
+              className="btn-primary w-full flex items-center justify-center gap-2 text-[15px]"
             >
-              {isLoading ? 'Criando conta...' : 'Criar Conta'}
+              {isLoading ? (
+                <>
+                  <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  Finalizar Cadastro
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
-          </form>
 
-          <div style={{
-            marginTop: '20px',
-            paddingTop: '20px',
-            borderTop: '1px solid #e0e8e5',
-            textAlign: 'center',
-          }}>
-            <p style={{ fontSize: '13px', color: '#5c6e6a' }}>
+            <p className="text-center text-sm text-[#3e4947] mt-4">
               Já possui uma conta?{' '}
-              <a href="/login" style={{
-                fontWeight: 700,
-                color: '#2563eb',
-                textDecoration: 'none',
-              }}>
-                Entrar
-              </a>
+              <Link to="/login" className="font-bold text-[#004e47] hover:underline">
+                Entrar agora
+              </Link>
             </p>
-          </div>
+          </form>
         </div>
-      </div>
+        <footer className="mt-6 pt-4 border-t border-[#e0e8e5]/30 flex flex-col md:flex-row justify-between items-center gap-4 opacity-60">
+          <span className="text-xs text-[#3e4947]">© 2026 PET-Saúde Clima</span>
+          <div className="flex gap-4">
+            <Link to="#" className="text-xs text-[#3e4947] hover:text-[#004e47] transition-colors">Suporte</Link>
+            <Link to="#" className="text-xs text-[#3e4947] hover:text-[#004e47] transition-colors">Sobre o Projeto</Link>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }

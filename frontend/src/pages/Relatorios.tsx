@@ -4,10 +4,10 @@ import Card from '../components/Card';
 
 const reports = [
   { id: 1, title: 'Boletim Epidemiológico — Janeiro 2025', type: 'Epidemiológico', date: '2025-01-31', pages: 24, status: 'disponível' },
-  { id: 2, title: 'Análise Climática — Verão 2024/25', type: 'Climático', date: '2025-01-15', pages: 18, status: 'disponível' },
-  { id: 3, title: 'Vulnerabilidade Territorial — PI Q4 2024', type: 'Vulnerabilidade', date: '2025-01-08', pages: 32, status: 'disponível' },
-  { id: 4, title: 'Correlação Chuva × Dengue — 2024', type: 'Análise', date: '2024-12-20', pages: 15, status: 'disponível' },
-  { id: 5, title: 'Relatório de Alertas — Dezembro 2024', type: 'Alertas', date: '2025-01-02', pages: 10, status: 'geração' },
+  { id: 2, title: 'Análise Climática — Verão 2026/25', type: 'Climático', date: '2025-01-15', pages: 18, status: 'disponível' },
+  { id: 3, title: 'Vulnerabilidade Territorial — PI Q4 2026', type: 'Vulnerabilidade', date: '2025-01-08', pages: 32, status: 'disponível' },
+  { id: 4, title: 'Correlação Chuva × Dengue — 2026', type: 'Análise', date: '2026-12-20', pages: 15, status: 'disponível' },
+  { id: 5, title: 'Relatório de Alertas — Dezembro 2026', type: 'Alertas', date: '2025-01-02', pages: 10, status: 'geração' },
 ];
 
 const typeColor: Record<string, string> = {

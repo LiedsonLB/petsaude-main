@@ -78,8 +78,8 @@ export default function Analise() {
                             <YAxis tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                             <Tooltip contentStyle={tt} />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Bar dataKey="dengue" name="Dengue 2024-25" fill="#2a78d6" radius={[3, 3, 0, 0]} barSize={12} />
-                            <Bar dataKey="lepto" name="Leptospirose 2024-25" fill="#eb6834" radius={[3, 3, 0, 0]} barSize={12} />
+                            <Bar dataKey="dengue" name="Dengue 2026-25" fill="#2a78d6" radius={[3, 3, 0, 0]} barSize={12} />
+                            <Bar dataKey="lepto" name="Leptospirose 2026-25" fill="#eb6834" radius={[3, 3, 0, 0]} barSize={12} />
                         </BarChart>
                     </ResponsiveContainer>
                 </Card>
