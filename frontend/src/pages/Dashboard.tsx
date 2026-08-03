@@ -1,15 +1,14 @@
-import { BarChart2, Bell, Map, ShieldAlert, TrendingUp, TrendingDown, Activity, Calendar, Download, RefreshCw, AlertTriangle } from 'lucide-react';
+import { BarChart2, Bell, Map, ShieldAlert, TrendingUp, TrendingDown, Calendar, Download, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Legend, LineChart, Line,
 } from 'recharts';
 import { alertsData, kpiData, monthlyData, municipiosRisco, vulnerabilityData } from '../data/Data';
-import Card from '../components/Card';
-import AlertBadge from '../components/AlertBadge';
 import { useTheme } from '../contexts/ThemeContext';
 import { useState } from 'react';
 import Topbar from '../components/Topbar';
+import AlertBadge from '../components/Alertbadge';
 
 const dotColor: Record<string, string> = {
     alto: '#dc2626',
@@ -171,7 +170,7 @@ export default function Dashboard() {
                     gap: '16px',
                     marginBottom: '24px',
                 }}>
-                    {kpiData.map((k, index) => {
+                    {kpiData.map((k) => {
                         const Icon = k.deltaType === 'up' ? TrendingUp : TrendingDown;
                         return (
                             <div

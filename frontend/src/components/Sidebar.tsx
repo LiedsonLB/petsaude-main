@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Map, LineChart, Bell, Upload,
   FileBarChart, Users, BookOpen, ShieldCheck, 
-  Settings, LogOut, Activity, Database, Book, Shield, UserCircle
+  Settings, LogOut, Database, Book, Shield, UserCircle
 } from 'lucide-react';
 
 const navMain = [

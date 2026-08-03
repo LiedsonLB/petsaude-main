@@ -1,56 +1,13 @@
-import { BookOpen, ExternalLink, CheckCircle, Shield, AlertTriangle, Info, Download, Search, X, Share } from 'lucide-react';
+import { BookOpen, ExternalLink, CheckCircle, AlertTriangle, Info, Download, Search, X, Share } from 'lucide-react';
 import { useState } from 'react';
 import { preventionContent } from '../data/Data';
-import AlertBadge from '../components/AlertBadge';
-import { useTheme } from '../contexts/ThemeContext';
+import AlertBadge from '../components/Alertbadge';
 
 export default function Prevencao() {
   const [selected, setSelected] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('todos');
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
 
-  const sectionStyle = {
-    background: 'var(--bg-sidebar)',
-    borderRadius: '16px',
-    border: '1px solid var(--border)',
-    overflow: 'hidden',
-    transition: 'all 0.2s ease',
-  };
-
-  const sectionHeaderStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '18px 24px',
-    borderBottom: '1px solid var(--border)',
-    background: 'var(--bg-input)',
-  };
-
-  const sectionTitleStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    fontSize: '15px',
-    fontWeight: 600,
-    color: 'var(--text-primary)',
-    margin: 0,
-  };
-
-  const sectionIconStyle = {
-    width: '32px',
-    height: '32px',
-    borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'var(--primary-light)',
-    color: 'var(--primary)',
-    flexShrink: 0,
-  };
-
-  // Filtros
   const filteredContent = preventionContent.filter(c => {
     const matchSearch = c.doenca.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.descricao.toLowerCase().includes(searchTerm.toLowerCase());
@@ -77,7 +34,6 @@ export default function Prevencao() {
           gap: '16px',
           marginBottom: '24px',
         }}>
-
           <button style={{
             display: 'flex',
             alignItems: 'center',
@@ -232,8 +188,6 @@ export default function Prevencao() {
         }}>
           {filteredContent.map((c) => {
             const isSelected = selected === c.id;
-            const riskColor = c.risco === 'alto' ? '#dc2626' : c.risco === 'medio' ? '#f59e0b' : '#10b981';
-            const riskBg = c.risco === 'alto' ? 'var(--danger-bg)' : c.risco === 'medio' ? 'var(--warning-bg)' : 'var(--success-bg)';
 
             return (
               <div

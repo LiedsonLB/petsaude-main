@@ -189,9 +189,6 @@ export default function Configuracoes() {
                                                     outline: 'none',
                                                     transition: 'border-color 0.2s',
                                                     width: '100%',
-                                                    ':focus': {
-                                                        borderColor: 'var(--primary)',
-                                                    }
                                                 }}
                                                 onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
                                                 onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
