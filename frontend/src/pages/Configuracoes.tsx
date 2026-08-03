@@ -7,8 +7,8 @@ export default function Configuracoes() {
     const { theme, toggle } = useTheme();
     const [saved, setSaved] = useState(false);
     const [formData, setFormData] = useState({
-        name: 'João Melo',
-        email: 'joao.melo@uespi.br',
+        name: 'Liedson Barros',
+        email: 'liedson.barros@gmail.com',
         institution: 'UESPI',
         role: 'Pesquisador'
     });

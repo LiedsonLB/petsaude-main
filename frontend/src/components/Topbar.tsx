@@ -383,7 +383,7 @@ export default function Topbar({ title: propTitle, subtitle: propSubtitle }: Pro
               fontSize: '12px',
               fontWeight: 600,
             }}>
-              JM
+              LB
             </div>
           </button>
 
@@ -406,10 +406,10 @@ export default function Topbar({ title: propTitle, subtitle: propSubtitle }: Pro
                 borderBottom: '1px solid var(--border)',
               }}>
                 <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
-                  João Melo
+                  Liedson Barros
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  joao.melo@uespi.br
+                  liedson.b9@gmail.com
                 </div>
               </div>
               <div style={{ padding: '4px 0' }}>

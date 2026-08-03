@@ -251,7 +251,7 @@ export default function Sidebar() {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}>
-              João Melo
+              Liedson Barros
             </div>
             <div style={{ 
               fontSize: '11px', 

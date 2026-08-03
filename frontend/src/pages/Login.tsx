@@ -18,7 +18,6 @@ export default function Login() {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      alert('Acesso institucional validado com sucesso.');
       navigate('/dashboard');
     }, 1500);
   };

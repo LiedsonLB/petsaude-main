@@ -155,7 +155,6 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-[80vh]">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-3 px-5 py-2 glass-dark rounded-full text-white/90 text-xs font-medium uppercase tracking-[0.15em] border border-white/20">
-                <span className="w-2 h-2 bg-[#79fabf] animate-pulse rounded-full shadow-[0_0_10px_rgba(121,250,191,0.7)]"></span>
                 Monitoramento Territorial
               </div>
               <h1 className="text-5xl font-bold text-white leading-[1.1] tracking-tight max-w-xl">
@@ -321,7 +320,7 @@ export default function LandingPage() {
                       ? 'shadow-[0_0_0_2px_rgba(0,78,71,0.2)]'
                       : 'shadow-[0_0_0_2px_rgba(110,121,119,0.3)]'
                     } ${item.year === '26' ? 'border-dashed' : ''}`}>
-                    <span className={`font-bold text-lg ${item.active && item.year === '24' ? 'text-white' : 'text-[#004e47]'}`}>
+                    <span className={`font-bold text-lg ${item.active ? 'text-primary-hover' : 'text-[#004e47]'}`}>
                       {item.year}
                     </span>
                   </div>
@@ -409,7 +408,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#ffffff] dark:bg-[#2d3130] border-t border-[#bec9c6]/20 py-16 mt-16">
+      <footer className="bg-[#ffffff] border-t border-[#bec9c6]/20 py-16 mt-16">
         <div className="max-w-[1280px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-16 mb-16">
             <div className="max-w-sm">
