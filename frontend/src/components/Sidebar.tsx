@@ -144,7 +144,7 @@ function NavItem({ to, icon: Icon, label, badge }: {
       style={({ isActive }) => ({
         ...s.navItem,
         background: isActive ? 'var(--primary-light, #dbeafe)' : 'transparent',
-        color: isActive ? 'var(--primary, #2563eb)' : 'var(--text-secondary, #374151)',
+        color: isActive ? 'white' : 'var(--text-secondary, #374151)',
         fontWeight: isActive ? 600 : 500,
         transform: isActive ? 'scale(1.02)' : 'scale(1)',
       })}

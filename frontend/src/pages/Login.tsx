@@ -118,7 +118,6 @@ export default function Login() {
                 <a href="#" style={{
                   fontSize: '12px',
                   fontWeight: 600,
-                  color: '#2563eb',
                   textDecoration: 'none',
                 }}>
                   Esqueceu a senha?
@@ -169,12 +168,12 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
+              className='bg-primary hover:bg-primary-dark'
               style={{
                 width: '100%',
                 height: '48px',
                 borderRadius: '10px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                 color: 'white',
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '15px',
@@ -201,7 +200,6 @@ export default function Login() {
               Não tem uma conta?{' '}
               <a href="/cadastro" style={{
                 fontWeight: 700,
-                color: '#2563eb',
                 textDecoration: 'none',
               }}>
                 Criar conta

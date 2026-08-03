@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Cloud, User, Mail, Lock, Calendar, Phone, FileText, Building } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, Calendar, Phone, FileText, Building } from 'lucide-react';
 
 export default function Cadastro() {
   const navigate = useNavigate();
