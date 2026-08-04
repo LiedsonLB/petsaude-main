@@ -145,7 +145,7 @@ export default function LandingPage() {
           <img
             alt="Piauí Landscape"
             className="w-full h-full object-cover scale-105 transform transition-transform duration-[20s] ease-out hover:scale-110"
-            src="https://coalizaopelasevidencias.org.br/wp-content/uploads/2023/10/PIRIPIRI-VISTA-AREA.jpg"
+            src="https://ipiranganews.inf.br/wp-content/uploads/VIAGEM-4-03-08-21.jpg"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent mix-blend-multiply"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#f7faf8] via-transparent to-transparent"></div>
@@ -153,6 +153,7 @@ export default function LandingPage() {
 
         <div className="max-w-[1280px] mx-auto px-6 w-full relative z-10 pt-32 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-[80vh]">
+            {/* Coluna da Esquerda - Texto */}
             <div className="space-y-6">
               <div className="inline-flex items-center gap-3 px-5 py-2 glass-dark rounded-full text-white/90 text-xs font-medium uppercase tracking-[0.15em] border border-white/20">
                 Monitoramento Territorial
@@ -178,25 +179,187 @@ export default function LandingPage() {
               </div>
             </div>
 
+            {/* Coluna da Direita - Cards Distribuídos como Fotos (4 Cidades) */}
             <div className="relative hidden lg:flex justify-end items-center">
-              <div className="glass-card p-4 rounded-[32px] w-[340px] shadow-2xl transform rotate-2 hover:rotate-0 transition-all duration-700 ease-out hover:scale-105">
-                <div className="aspect-video rounded-2xl overflow-hidden mb-4 relative group">
-                  <img
-                    alt="Piauí Territory"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTqL5u7IX0x3Z9eKxw2S2QSrGrcfWGjr9sVtRYhayvsjmpu7tZZfvVdM3x7&s=10"
-                  />
-                  <div className="absolute inset-0 bg-[#004e47]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <p className="text-[#004e47] font-bold text-lg">Territórios 2026</p>
-                    <span className="px-3 py-1 bg-[#004e47]/10 text-[#004e47] text-[10px] rounded-full font-bold uppercase tracking-wider">Live</span>
+              <div className="relative w-[520px] h-[540px]">
+                {/* Card 1 - Piripiri (Canto superior esquerdo) */}
+                <div
+                  className="absolute top-[0rem] left-[4rem] w-[260px] glass-card p-4 rounded-[24px] shadow-2xl transition-all duration-500 ease-out z-10 hover:z-50 hover:scale-110 hover:-translate-y-6 hover:rotate-0 group/card1"
+                  style={{ transform: 'rotate(-6deg)' }}
+                >
+                  <div className="aspect-square rounded-2xl overflow-hidden relative group">
+                    <img
+                      alt="Piripiri - Piauí"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      src="https://coalizaopelasevidencias.org.br/wp-content/uploads/2023/10/PIRIPIRI-VISTA-AREA.jpg"
+                    />
+                    <div className="absolute inset-0 bg-[#004e47]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   </div>
-                  <p className="text-[#3e4947] text-sm leading-relaxed">Mapeamento de vulnerabilidades climáticas em tempo real nos 224 municípios.</p>
+                  <div className="pt-3 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-base">Piripiri</p>
+                      <span className="px-3 py-1 bg-[#004e47]/10 text-[#004e47] text-[10px] rounded-full font-bold uppercase tracking-wider">Monitoramento</span>
+                    </div>
+                    <p className="text-[#3e4947] text-sm leading-relaxed">Análise de vulnerabilidades climáticas e impactos na saúde da população.</p>
+                  </div>
+                </div>
+
+                {/* Card 2 - Teresina (Centro direita) */}
+                <div
+                  className="absolute top-8 right-[-3rem] w-[260px] glass-card p-4 rounded-[24px] shadow-2xl transition-all duration-500 ease-out z-20 hover:z-50 hover:scale-110 hover:-translate-y-6 hover:rotate-0 group/card2"
+                  style={{ transform: 'rotate(5deg)' }}
+                >
+                  <div className="aspect-square rounded-2xl overflow-hidden relative group">
+                    <img
+                      alt="Teresina - Piauí"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      src="https://www.viagensecaminhos.com/wp-content/uploads/2024/08/teresina-piaui.jpg"
+                    />
+                    <div className="absolute inset-0 bg-[#004e47]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  </div>
+                  <div className="pt-3 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-base">Teresina</p>
+                      <span className="px-3 py-1 bg-[#004e47]/10 text-[#004e47] text-[10px] rounded-full font-bold uppercase tracking-wider">Dados</span>
+                    </div>
+                    <p className="text-[#3e4947] text-sm leading-relaxed">Integração de dados climáticos e epidemiológicos para vigilância em saúde.</p>
+                  </div>
+                </div>
+
+                {/* Card 3 - Parnaíba (Inferior esquerdo) */}
+                <div
+                  className="absolute bottom-[-1rem] left-0 w-[260px] glass-card p-4 rounded-[24px] shadow-2xl transition-all duration-500 ease-out z-30 hover:z-50 hover:scale-110 hover:-translate-y-6 hover:rotate-0 group/card3"
+                  style={{ transform: 'rotate(-3deg)' }}
+                >
+                  <div className="aspect-square rounded-2xl overflow-hidden relative group">
+                    <img
+                      alt="Parnaíba - Piauí"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      src="https://rotasdasemocoes.com.br/wp-content/uploads/2022/04/parnaiba.jpg"
+                    />
+                    <div className="absolute inset-0 bg-[#004e47]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  </div>
+                  <div className="pt-3 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-base">Parnaíba</p>
+                      <span className="px-3 py-1 bg-[#004e47]/10 text-[#004e47] text-[10px] rounded-full font-bold uppercase tracking-wider">Ação</span>
+                    </div>
+                    <p className="text-[#3e4947] text-sm leading-relaxed">Capacitação comunitária e ações de mitigação para resiliência climática.</p>
+                  </div>
+                </div>
+
+                {/* Card 4 - Picos (Inferior direito) */}
+                <div
+                  className="absolute bottom-[-1rem] right-[-2rem] w-[260px] glass-card p-4 rounded-[24px] shadow-2xl transition-all duration-500 ease-out z-40 hover:z-50 hover:scale-110 hover:-translate-y-6 hover:rotate-0 group/card4"
+                  style={{ transform: 'rotate(2deg)' }}
+                >
+                  <div className="aspect-square rounded-2xl overflow-hidden relative group">
+                    <img
+                      alt="Picos - Piauí"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Panor%C3%A2mica_30.jpg?utm_source=pt.wikipedia.org&utm_campaign=index&utm_content=original"
+                    />
+                    <div className="absolute inset-0 bg-[#004e47]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  </div>
+                  <div className="pt-3 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-base">Picos</p>
+                      <span className="px-3 py-1 bg-[#004e47]/10 text-[#004e47] text-[10px] rounded-full font-bold uppercase tracking-wider">Educação</span>
+                    </div>
+                    <p className="text-[#3e4947] text-sm leading-relaxed">Formação acadêmica e pesquisa aplicada para enfrentamento das mudanças climáticas.</p>
+                  </div>
+                </div>
+
+                {/* Indicador visual de interação */}
+                <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 text-white/30 text-[10px] font-medium tracking-wider whitespace-nowrap pointer-events-none">
+                  ✦ Passe o mouse para ver melhor ✦
                 </div>
               </div>
             </div>
+
+            {/* Versão Mobile dos Cards - 4 Cidades */}
+            <div className="lg:hidden w-full mt-8 space-y-4">
+              {/* Card 1 - Piripiri */}
+              <div className="glass-card p-3 rounded-[20px] w-full shadow-2xl">
+                <div className="flex gap-4 items-center">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
+                    <img
+                      alt="Piripiri - Piauí"
+                      className="w-full h-full object-cover"
+                      src="https://coalizaopelasevidencias.org.br/wp-content/uploads/2023/10/PIRIPIRI-VISTA-AREA.jpg"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-sm">Piripiri</p>
+                      <span className="px-2 py-0.5 bg-[#004e47]/10 text-[#004e47] text-[8px] rounded-full font-bold uppercase tracking-wider">Monitoramento</span>
+                    </div>
+                    <p className="text-[#3e4947] text-xs leading-relaxed line-clamp-1">Análise de vulnerabilidades climáticas</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2 - Teresina */}
+              <div className="glass-card p-3 rounded-[20px] w-full shadow-2xl">
+                <div className="flex gap-4 items-center">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
+                    <img
+                      alt="Teresina - Piauí"
+                      className="w-full h-full object-cover"
+                      src="https://www.viagensecaminhos.com/wp-content/uploads/2024/08/teresina-piaui.jpg"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-sm">Teresina</p>
+                      <span className="px-2 py-0.5 bg-[#004e47]/10 text-[#004e47] text-[8px] rounded-full font-bold uppercase tracking-wider">Dados</span>
+                    </div>
+                    <p className="text-[#3e4947] text-xs leading-relaxed line-clamp-1">Integração de dados climáticos</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3 - Parnaíba */}
+              <div className="glass-card p-3 rounded-[20px] w-full shadow-2xl">
+                <div className="flex gap-4 items-center">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
+                    <img
+                      alt="Parnaíba - Piauí"
+                      className="w-full h-full object-cover"
+                      src="https://rotasdasemocoes.com.br/wp-content/uploads/2022/04/parnaiba.jpg"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-sm">Parnaíba</p>
+                      <span className="px-2 py-0.5 bg-[#004e47]/10 text-[#004e47] text-[8px] rounded-full font-bold uppercase tracking-wider">Ação</span>
+                    </div>
+                    <p className="text-[#3e4947] text-xs leading-relaxed line-clamp-1">Capacitação comunitária</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4 - Picos */}
+              <div className="glass-card p-3 rounded-[20px] w-full shadow-2xl">
+                <div className="flex gap-4 items-center">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
+                    <img
+                      alt="Picos - Piauí"
+                      className="w-full h-full object-cover"
+                      src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Panor%C3%A2mica_30.jpg?utm_source=pt.wikipedia.org&utm_campaign=index&utm_content=original"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[#004e47] font-bold text-sm">Picos</p>
+                      <span className="px-2 py-0.5 bg-[#004e47]/10 text-[#004e47] text-[8px] rounded-full font-bold uppercase tracking-wider">Educação</span>
+                    </div>
+                    <p className="text-[#3e4947] text-xs leading-relaxed line-clamp-1">Formação acadêmica e pesquisa</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </header>

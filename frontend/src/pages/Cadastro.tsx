@@ -285,7 +285,7 @@ export default function Cadastro() {
               />
               <span className="text-xs text-[#3e4947]">
                 Eu li e concordo com os <Link to="#" className="text-[#004e47] font-semibold hover:underline">Termos de Uso</Link> e a{' '}
-                <Link to="#" className="text-[#004e47] font-semibold hover:underline">Política de Privacidade</Link> da rede PET-Saúde.
+                <Link to="#" className="text-[#004e47] font-semibold hover:underline">Política de Privacidade</Link> do projeto PET-Saúde Clima.
               </span>
             </label>
 
