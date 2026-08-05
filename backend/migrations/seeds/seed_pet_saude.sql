@@ -75,3 +75,62 @@ INSERT INTO gats (numero, eixo, nome, objetivo) VALUES
   (4, 'II',  'Educação em Saúde', 'Educação em saúde e fortalecimento das práticas de cuidado.'),
   (5, 'III', 'Gestão, Inovação e Integração Ensino-Serviço-Comunidade', 'Comunicação e disseminação de conhecimentos.')
 ON CONFLICT (numero) DO NOTHING;
+
+-- ── Pesquisadores/alunos vinculados a cada GAT (tela Pesquisadores) ──
+DO $$
+DECLARE
+  g1 UUID := (SELECT id FROM gats WHERE numero = 1);
+  g2 UUID := (SELECT id FROM gats WHERE numero = 2);
+  g3 UUID := (SELECT id FROM gats WHERE numero = 3);
+  g4 UUID := (SELECT id FROM gats WHERE numero = 4);
+  g5 UUID := (SELECT id FROM gats WHERE numero = 5);
+  teresina UUID := '10000000-0000-0000-0000-000000000001';
+  parnaiba UUID := '10000000-0000-0000-0000-000000000002';
+  picos    UUID := '10000000-0000-0000-0000-000000000003';
+BEGIN
+  INSERT INTO pesquisadores (gat_id, nome, perfil, curso, instituicao, municipio_id) VALUES
+    (g1, 'Profª. Ana Beatriz Coelho',   'Tutora',                'Enfermagem',            'UESPI', teresina),
+    (g1, 'Lucas Ferreira Nunes',        'Aluno',                 'Enfermagem',            'UESPI', teresina),
+    (g1, 'Mariana Sales Rocha',         'Aluno',                 'Medicina',              'UESPI', teresina),
+    (g2, 'Prof. Ricardo Pontes Lima',   'Tutor Coordenador',     'Geografia',             'UESPI', teresina),
+    (g2, 'João Vitor Araújo Melo',      'Aluno',                 'Geografia',             'UESPI', parnaiba),
+    (g3, 'Profª. Camila dos Santos',    'Preceptora',            'Fisioterapia',          'UESPI', teresina),
+    (g3, 'Beatriz Lima Carvalho',       'Aluno',                 'Fisioterapia',          'UESPI', picos),
+    (g4, 'Prof. Eduardo Nascimento',    'Orientador de Serviço', 'Odontologia',           'UESPI', teresina),
+    (g4, 'Rafaela Moura Batista',       'Aluno',                 'Odontologia',           'UESPI', teresina),
+    (g5, 'Profª. Patrícia Alves Souza', 'Tutora',                'Sistemas de Informação','UESPI', teresina),
+    (g5, 'Gabriel Henrique Rodrigues',  'Aluno',                 'Sistemas de Informação','UESPI', teresina)
+  ON CONFLICT DO NOTHING;
+END $$;
+
+-- ── Conteúdos de orientação (tela Prevenção — plataforma dos alunos) ──
+-- Fichas de referência das 4 doenças (equivalente ao preventionContent
+-- hardcoded que existia em data/Data.ts) já entram como conteúdo real,
+-- publicadas pela coordenação; os alunos passam a poder complementar
+-- com vídeos/relatos/dicas próprios via POST /api/conteudos.
+INSERT INTO conteudos_orientacao (titulo, tipo, doenca, resumo, corpo, url, autor_nome, autor_perfil, status) VALUES
+  ('Dengue: o que é e como se prevenir', 'artigo', 'Dengue',
+   'Doença viral transmitida pelo mosquito Aedes aegypti. Sintomas: febre alta, dores no corpo e manchas na pele.',
+   'Medidas de prevenção: eliminar água parada em recipientes; usar repelente regularmente; instalar telas em janelas e portas; verificar calhas e pneus.',
+   'https://www.gov.br/saude/dengue', 'Coordenação PET-Saúde', 'Tutor', 'publicado'),
+  ('Leptospirose: cuidados em época de enchente', 'artigo', 'Leptospirose',
+   'Doença bacteriana transmitida pela urina de ratos. O risco aumenta em períodos de enchentes.',
+   'Medidas de prevenção: evitar contato com água de enchente; usar botas e luvas ao limpar locais alagados; vacinar animais domésticos; controle de roedores.',
+   'https://www.gov.br/saude/leptospirose', 'Coordenação PET-Saúde', 'Tutor', 'publicado'),
+  ('Malária: transmissão e prevenção', 'artigo', 'Malária',
+   'Doença parasitária transmitida pelo mosquito Anopheles. Sintomas: febre, calafrios e anemia.',
+   'Medidas de prevenção: usar mosquiteiros tratados com inseticida; aplicar repelente após o entardecer; tratamento profilático em áreas endêmicas; diagnóstico precoce.',
+   'https://www.gov.br/saude/malaria', 'Coordenação PET-Saúde', 'Tutor', 'publicado'),
+  ('Chikungunya: sintomas e cuidados', 'artigo', 'Chikungunya',
+   'Vírus transmitido pelo Aedes aegypti e Aedes albopictus. Causa febre e dores articulares intensas.',
+   'Medidas de prevenção: mesmas medidas de combate ao mosquito da dengue; repouso e hidratação; evitar aspirina como analgésico; monitoramento médico.',
+   'https://www.gov.br/saude/chikungunya', 'Coordenação PET-Saúde', 'Tutor', 'publicado'),
+  ('Relato de campo: ação de combate à dengue em Teresina', 'relato', 'Dengue',
+   'Relato de visita domiciliar do GAT de Vigilância Epidemiológica em bairro com alta incidência.',
+   'Durante a visita, identificamos criadouros em vasos de planta e caixas d''água sem tampa. Orientamos 32 famílias sobre eliminação de focos.',
+   NULL, 'Lucas Ferreira Nunes', 'Aluno', 'publicado'),
+  ('Dica rápida: como identificar focos do mosquito em casa', 'dica', 'Dengue',
+   'Checklist simples para inspeção residencial semanal.',
+   'Verifique pratinhos de vaso, calhas, garrafas viradas para baixo, ralos com tela e caixas d''água sempre tampadas.',
+   NULL, 'Mariana Sales Rocha', 'Aluno', 'publicado')
+ON CONFLICT DO NOTHING;

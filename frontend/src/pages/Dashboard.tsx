@@ -4,7 +4,8 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Legend, LineChart, Line,
 } from 'recharts';
-import { alertsData, kpiData, monthlyData, municipiosRisco } from '../data/Data';
+import { api, type Alerta, type Municipio, type DashboardKPIs } from '../lib/api';
+import { timeAgo } from '../lib/timeAgo';
 import { useTheme } from '../contexts/ThemeContext';
 import { useState, useRef, useEffect } from 'react';
 import Topbar from '../components/Topbar';
@@ -26,6 +27,13 @@ const periodOptions = [
     { value: 'custom', label: 'Personalizado' },
 ];
 
+interface PontoGrafico {
+    mes: string;
+    dengue: number;
+    lepto: number;
+    chuva: number;
+}
+
 export default function Dashboard() {
     const navigate = useNavigate();
     const { theme } = useTheme();
@@ -37,6 +45,71 @@ export default function Dashboard() {
     const isDark = theme === 'dark';
     const axisColor = isDark ? '#6d8580' : '#9aaba7';
     const gridColor = isDark ? '#2a3a36' : '#e0e8e5';
+
+    // ── Dados reais (substituem data/Data.ts) ────────────────────
+    const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+    const [alertsData, setAlertsData] = useState<Alerta[]>([]);
+    const [municipiosRisco, setMunicipiosRisco] = useState<Municipio[]>([]);
+    const [monthlyData, setMonthlyData] = useState<PontoGrafico[]>([]);
+    const [loadingDashboard, setLoadingDashboard] = useState(true);
+
+    const carregarDashboard = () => {
+        setLoadingDashboard(true);
+        Promise.all([
+            api.dashboardKpis(),
+            api.alertas({ status: 'ativo' }),
+            api.municipios(),
+            api.serieMensal({ meses: 8 }),
+        ])
+            .then(([kpisRes, alertasRes, municipiosRes, serieRes]) => {
+                setKpis(kpisRes);
+                setAlertsData(alertasRes.data);
+                setMunicipiosRisco([...municipiosRes.data].sort((a, b) => b.casos_recentes - a.casos_recentes));
+                setMonthlyData(serieRes.data.map(p => ({
+                    mes: p.mes,
+                    dengue: p.agravos['dengue'] || 0,
+                    lepto: p.agravos['leptospirose'] || 0,
+                    chuva: p.chuva_mm,
+                })));
+            })
+            .catch(() => { /* mantém o que já estava carregado em caso de falha pontual */ })
+            .finally(() => setLoadingDashboard(false));
+    };
+
+    useEffect(() => {
+        carregarDashboard();
+    }, []);
+
+    const kpiData = kpis ? [
+        {
+            label: 'Casos Notificados',
+            value: kpis.casos_notificados.toLocaleString('pt-BR'),
+            delta: `${kpis.casos_notificados_delta_pct >= 0 ? '+' : ''}${kpis.casos_notificados_delta_pct.toFixed(0)}%`,
+            deltaType: kpis.casos_notificados_delta_pct >= 0 ? 'up' : 'down',
+            sub: 'vs. mês anterior',
+        },
+        {
+            label: 'Municípios em Alerta',
+            value: String(kpis.municipios_em_alerta),
+            delta: `+${kpis.municipios_em_alerta_novos}`,
+            deltaType: 'up',
+            sub: 'novos nos últimos 7 dias',
+        },
+        {
+            label: 'Índice Pluviométrico',
+            value: `${kpis.indice_pluviometrico_mm.toFixed(0)}mm`,
+            delta: '–',
+            deltaType: 'neutral',
+            sub: 'Média do último registro',
+        },
+        {
+            label: 'Risco Climático',
+            value: kpis.nivel_risco_climatico,
+            delta: '',
+            deltaType: kpis.nivel_risco_climatico === 'Alto' ? 'up' : 'neutral',
+            sub: 'Piauí',
+        },
+    ] : [];
 
     // Fecha o dropdown ao clicar fora
     useEffect(() => {
@@ -262,20 +335,22 @@ export default function Dashboard() {
                             <Download size={16} />
                             Exportar
                         </button>
-                        <button style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 16px',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-input)',
-                            color: 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
+                        <button
+                            onClick={carregarDashboard}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 16px',
+                                borderRadius: '10px',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-input)',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                            }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.background = 'var(--bg-hover)';
                             }}
@@ -283,7 +358,7 @@ export default function Dashboard() {
                                 e.currentTarget.style.background = 'var(--bg-input)';
                             }}
                         >
-                            <RefreshCw size={16} />
+                            <RefreshCw size={16} className={loadingDashboard ? 'animate-spin' : ''} />
                             Atualizar
                         </button>
                     </div>
@@ -560,7 +635,7 @@ export default function Dashboard() {
                                 <text x="109" y="209" fontSize="9" fill={isDark ? '#e8f0ee' : '#412402'}>Médio</text>
                                 <rect x="165" y="200" width="10" height="10" rx="2" fill="#10b981" opacity="0.60" />
                                 <text x="179" y="209" fontSize="9" fill={isDark ? '#e8f0ee' : '#064e3b'}>Baixo</text>
-                                <text x="300" y="230" fontSize="8" fill={axisColor}>Chuva: 312mm/mês</text>
+                                <text x="300" y="230" fontSize="8" fill={axisColor}>Chuva: {kpis ? `${kpis.indice_pluviometrico_mm.toFixed(0)}mm/mês` : '—'}</text>
                             </svg>
                         </div>
 
@@ -568,7 +643,7 @@ export default function Dashboard() {
                         <div style={{ padding: '0 0 4px' }}>
                             {municipiosRisco.slice(0, 4).map((m, idx) => (
                                 <div
-                                    key={m.nome}
+                                    key={m.id}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -596,9 +671,9 @@ export default function Dashboard() {
                                         color: 'var(--text-secondary)',
                                         marginRight: '12px'
                                     }}>
-                                        {m.casos.toLocaleString('pt-BR')} casos
+                                        {m.casos_recentes.toLocaleString('pt-BR')} casos
                                     </span>
-                                    <AlertBadge level={m.risco as any} />
+                                    <AlertBadge level={m.risco_nivel as any} />
                                 </div>
                             ))}
                         </div>
@@ -661,7 +736,7 @@ export default function Dashboard() {
                                         width: '8px',
                                         height: '8px',
                                         borderRadius: '50%',
-                                        background: dotColor[a.level],
+                                        background: dotColor[a.nivel],
                                         flexShrink: 0,
                                     }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -673,17 +748,17 @@ export default function Dashboard() {
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                         }}>
-                                            {a.title}
+                                            {a.titulo}
                                         </div>
                                         <div style={{
                                             fontSize: '11px',
                                             color: 'var(--text-muted)',
                                             marginTop: '2px',
                                         }}>
-                                            {a.region} · {a.time}
+                                            {a.municipio_nome || 'Sem município'} · {timeAgo(a.created_at)}
                                         </div>
                                     </div>
-                                    <AlertBadge level={a.level as any} />
+                                    <AlertBadge level={a.nivel as any} />
                                 </div>
                             ))}
                         </div>
@@ -896,12 +971,12 @@ export default function Dashboard() {
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                            }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                }}
                             />
                             <div style={{
                                 position: 'absolute',
@@ -1118,9 +1193,9 @@ export default function Dashboard() {
                             }}>
                                 <tr>
                                     <th style={{ padding: '16px 24px', fontWeight: 600 }}>Município</th>
-                                    <th style={{ padding: '16px 24px', fontWeight: 600 }}>Temp. Atual</th>
+                                    <th style={{ padding: '16px 24px', fontWeight: 600 }}>Incidência /100k</th>
                                     <th style={{ padding: '16px 24px', fontWeight: 600 }}>Status Alerta</th>
-                                    <th style={{ padding: '16px 24px', fontWeight: 600 }}>Última Atualização</th>
+                                    <th style={{ padding: '16px 24px', fontWeight: 600 }}>Vulnerabilidade</th>
                                     <th style={{ padding: '16px 24px', fontWeight: 600, textAlign: 'right' }}>Ação</th>
                                 </tr>
                             </thead>
@@ -1128,10 +1203,10 @@ export default function Dashboard() {
                                 borderCollapse: 'collapse',
                             }}>
                                 {municipiosRisco.slice(0, 4).map((m, idx) => {
-                                    const risk = riskColors[m.risco as keyof typeof riskColors] || riskColors.baixo;
+                                    const risk = riskColors[m.risco_nivel as keyof typeof riskColors] || riskColors.baixo;
                                     return (
                                         <tr
-                                            key={m.nome}
+                                            key={m.id}
                                             style={{
                                                 borderTop: idx === 0 ? 'none' : '1px solid rgba(190,201,198,0.1)',
                                                 transition: 'background 0.2s',
@@ -1164,7 +1239,7 @@ export default function Dashboard() {
                                                 padding: '16px 24px',
                                                 fontWeight: 500,
                                                 color: '#181c1c',
-                                            }}>{'32.5°C'}</td>
+                                            }}>{m.incidencia_recente.toFixed(1)}</td>
                                             <td style={{ padding: '16px 24px' }}>
                                                 <span style={{
                                                     display: 'inline-flex',
@@ -1185,16 +1260,16 @@ export default function Dashboard() {
                                                         height: '6px',
                                                         borderRadius: '50%',
                                                         background: risk.dot,
-                                                        animation: m.risco === 'alto' ? 'pulse-dot 2s ease-in-out infinite' : 'none',
+                                                        animation: m.risco_nivel === 'alto' ? 'pulse-dot 2s ease-in-out infinite' : 'none',
                                                     }} />
-                                                    {statusLabels[m.risco as keyof typeof statusLabels]}
+                                                    {statusLabels[m.risco_nivel as keyof typeof statusLabels]}
                                                 </span>
                                             </td>
                                             <td style={{
                                                 padding: '16px 24px',
                                                 color: '#3e4947',
                                                 fontSize: '13px',
-                                            }}>{'10 min atrás'}</td>
+                                            }}>{m.vulnerabilidade_media > 0 ? `${m.vulnerabilidade_media.toFixed(0)}%` : '—'}</td>
                                             <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                                                 <button style={{
                                                     padding: '6px',
@@ -1206,16 +1281,16 @@ export default function Dashboard() {
                                                     transition: 'all 0.2s',
                                                     fontSize: '20px',
                                                 }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = 'rgba(0,78,71,0.1)';
-                                                    e.currentTarget.style.color = '#004e47';
-                                                    e.currentTarget.style.borderColor = 'rgba(0,78,71,0.2)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.background = 'transparent';
-                                                    e.currentTarget.style.color = '#3e4947';
-                                                    e.currentTarget.style.borderColor = 'transparent';
-                                                }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = 'rgba(0,78,71,0.1)';
+                                                        e.currentTarget.style.color = '#004e47';
+                                                        e.currentTarget.style.borderColor = 'rgba(0,78,71,0.2)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = 'transparent';
+                                                        e.currentTarget.style.color = '#3e4947';
+                                                        e.currentTarget.style.borderColor = 'transparent';
+                                                    }}
                                                 >
                                                     →
                                                 </button>

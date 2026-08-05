@@ -1,14 +1,48 @@
 import { useEffect, useRef, useState } from 'react';
-import { municipiosRisco } from '../data/Data';
+import { api, type Municipio } from '../lib/api';
 import Topbar from '../components/Topbar';
 import AlertBadge from '../components/Alertbadge';
+
+const doencas = ['Dengue', 'Leptospirose', 'Malária', 'Chikungunya'];
+// A base SINAN usa nomes em minúsculo/sem acento para o campo `agravo`.
+const doencaToAgravo: Record<string, string> = {
+  Dengue: 'dengue',
+  Leptospirose: 'leptospirose',
+  Malária: 'malaria',
+  Chikungunya: 'chikungunya',
+};
 
 export default function Mapa() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
+  const markersLayer = useRef<any>(null);
   const [selectedDoenca, setSelectedDoenca] = useState('Dengue');
-  const doencas = ['Dengue', 'Leptospirose', 'Malária', 'Chikungunya'];
+  const [municipios, setMunicipios] = useState<Municipio[]>([]);
+  const [casosPorMunicipio, setCasosPorMunicipio] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
   const riskColor: Record<string, string> = { alto: '#d03b3b', medio: '#eda100', baixo: '#1baf7a' };
+
+  // Carrega os municípios (com risco já calculado pela API) uma única vez.
+  useEffect(() => {
+    api.municipios()
+      .then(res => setMunicipios(res.data))
+      .catch(() => setMunicipios([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Recarrega os casos específicos da doença selecionada (para o tamanho dos círculos).
+  useEffect(() => {
+    const agravo = doencaToAgravo[selectedDoenca];
+    api.epidemiologicos({ agravo, limit: '500' })
+      .then(res => {
+        const somaPorMunicipio: Record<string, number> = {};
+        for (const item of res.data) {
+          somaPorMunicipio[item.municipio_id] = (somaPorMunicipio[item.municipio_id] || 0) + item.casos;
+        }
+        setCasosPorMunicipio(somaPorMunicipio);
+      })
+      .catch(() => setCasosPorMunicipio({}));
+  }, [selectedDoenca]);
 
   useEffect(() => {
     if (mapInstance.current || !mapRef.current) return;
@@ -27,25 +61,7 @@ export default function Mapa() {
         maxZoom: 18,
       }).addTo(map);
 
-      municipiosRisco.forEach(m => {
-        const circle = L.circleMarker([m.lat, m.lng], {
-          radius: Math.max(8, Math.log(m.casos) * 2.5),
-          fillColor: riskColor[m.risco],
-          color: '#fff',
-          weight: 2,
-          opacity: 0.9,
-          fillOpacity: 0.75,
-        }).addTo(map);
-
-        circle.bindPopup(`
-          <div style="font-family:Inter,sans-serif;padding:4px">
-            <strong style="font-size:13px">${m.nome}</strong><br/>
-            <span style="font-size:11px;color:#666">Casos: ${m.casos.toLocaleString('pt-BR')}</span><br/>
-            <span style="font-size:11px;color:${riskColor[m.risco]};font-weight:600;text-transform:capitalize">Risco: ${m.risco}</span>
-          </div>
-        `);
-      });
-
+      markersLayer.current = L.layerGroup().addTo(map);
       mapInstance.current = map;
     });
 
@@ -56,6 +72,37 @@ export default function Mapa() {
       }
     };
   }, []);
+
+  // Redesenha os marcadores sempre que os municípios ou a doença selecionada mudarem.
+  useEffect(() => {
+    if (!mapInstance.current || !markersLayer.current || municipios.length === 0) return;
+
+    import('leaflet').then(L => {
+      markersLayer.current.clearLayers();
+
+      municipios.forEach(m => {
+        const casos = casosPorMunicipio[m.id] ?? m.casos_recentes;
+        const circle = L.circleMarker([m.lat, m.lng], {
+          radius: Math.max(8, Math.log(Math.max(casos, 1) + 1) * 2.5),
+          fillColor: riskColor[m.risco_nivel] || riskColor.baixo,
+          color: '#fff',
+          weight: 2,
+          opacity: 0.9,
+          fillOpacity: 0.75,
+        }).addTo(markersLayer.current);
+
+        circle.bindPopup(`
+          <div style="font-family:Inter,sans-serif;padding:4px">
+            <strong style="font-size:13px">${m.nome}</strong><br/>
+            <span style="font-size:11px;color:#666">${selectedDoenca}: ${casos.toLocaleString('pt-BR')} casos</span><br/>
+            <span style="font-size:11px;color:${riskColor[m.risco_nivel]};font-weight:600;text-transform:capitalize">Risco: ${m.risco_nivel}</span>
+          </div>
+        `);
+      });
+    });
+  }, [municipios, casosPorMunicipio, selectedDoenca]);
+
+  const municipiosOrdenados = [...municipios].sort((a, b) => (b.casos_recentes) - (a.casos_recentes));
 
   return (
     <>
@@ -98,16 +145,19 @@ export default function Mapa() {
           borderRadius: 12, padding: 14, width: 240, boxShadow: 'var(--shadow-md)',
         }}>
           <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Municípios em destaque</p>
-          {municipiosRisco.map(m => (
-            <div key={m.nome} style={{
+          {loading && <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Carregando...</p>}
+          {!loading && municipiosOrdenados.map(m => (
+            <div key={m.id} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '6px 0', borderBottom: '1px solid var(--border)',
             }}>
               <div>
                 <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{m.nome}</p>
-                <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{m.casos.toLocaleString('pt-BR')} casos</p>
+                <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  {(casosPorMunicipio[m.id] ?? m.casos_recentes).toLocaleString('pt-BR')} casos
+                </p>
               </div>
-              <AlertBadge level={m.risco as any} />
+              <AlertBadge level={m.risco_nivel as any} />
             </div>
           ))}
         </div>

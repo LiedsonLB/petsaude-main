@@ -71,3 +71,4 @@ func KeyAlertas(status, nivel string) string { return fmt.Sprintf("alertas:%s:%s
 func KeyMunicipios() string                  { return "municipios:all" }
 func KeyDashboardKPIs() string               { return "dashboard:kpis" }
 func KeyGats() string                        { return "gats:all" }
+func KeySerieMensal(params string) string    { return fmt.Sprintf("indicadores:serie-mensal:%s", params) }

@@ -181,6 +181,62 @@ func (h *Handler) ListPesquisadores(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"data": items})
 }
 
+// GET /api/indicadores/serie-mensal?municipio_id=&meses=12
+func (h *Handler) SerieMensal(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	municipioID := q.Get("municipio_id")
+	meses, _ := strconv.Atoi(q.Get("meses"))
+	if meses == 0 {
+		meses = 12
+	}
+
+	cacheKey := cache.KeySerieMensal(fmt.Sprintf("%s|%d", municipioID, meses))
+	var items []models.SerieMensalPonto
+	if hit, _ := h.cache.Get(r.Context(), cacheKey, &items); hit {
+		writeJSON(w, http.StatusOK, map[string]any{"data": items})
+		return
+	}
+
+	items, err := h.repo.ListSerieMensal(r.Context(), municipioID, meses)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "falha ao calcular série mensal")
+		return
+	}
+	_ = h.cache.Set(r.Context(), cacheKey, items, cache.DefaultTTL)
+	writeJSON(w, http.StatusOK, map[string]any{"data": items})
+}
+
+// GET /api/conteudos?tipo=&doenca=&status=
+func (h *Handler) ListConteudos(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	items, err := h.repo.ListConteudos(r.Context(), q.Get("tipo"), q.Get("doenca"), q.Get("status"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "falha ao listar conteúdos de orientação")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": items})
+}
+
+// POST /api/conteudos
+func (h *Handler) CreateConteudo(w http.ResponseWriter, r *http.Request) {
+	var body models.ConteudoOrientacao
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo inválido")
+		return
+	}
+	if body.Titulo == "" || body.AutorNome == "" {
+		writeError(w, http.StatusBadRequest, "titulo e autor_nome são obrigatórios")
+		return
+	}
+	created, err := h.repo.CreateConteudo(r.Context(), body)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "falha ao publicar conteúdo")
+		return
+	}
+	_ = h.cache.DeleteByPrefix(r.Context(), "conteudos:")
+	writeJSON(w, http.StatusCreated, created)
+}
+
 // GET /api/dashboard/kpis
 func (h *Handler) DashboardKPIs(w http.ResponseWriter, r *http.Request) {
 	cacheKey := cache.KeyDashboardKPIs()

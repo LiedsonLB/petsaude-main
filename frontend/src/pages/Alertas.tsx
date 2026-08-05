@@ -1,20 +1,35 @@
-import { Bell, AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import { useState } from 'react';
-import { alertsData } from '../data/Data';
+import { Bell, AlertTriangle, CheckCircle, Info, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { api, type Alerta } from '../lib/api';
+import { timeAgo } from '../lib/timeAgo';
 import Topbar from '../components/Topbar';
 import Card from '../components/Card';
 import AlertBadge from '../components/Alertbadge';
 
-const summaryCards = [
-  { label: 'Críticos', count: 3, color: '#d03b3b', bg: 'var(--danger-bg)', icon: AlertTriangle },
-  { label: 'Médios', count: 2, color: '#eda100', bg: 'var(--warning-bg)', icon: Info },
-  { label: 'Baixos', count: 2, color: '#1baf7a', bg: 'var(--success-bg)', icon: CheckCircle },
-  { label: 'Total hoje', count: 7, color: 'var(--text-primary)', bg: 'var(--bg-input)', icon: Bell },
-];
-
 export default function Alertas() {
   const [filter, setFilter] = useState<string>('todos');
-  const filtered = filter === 'todos' ? alertsData : alertsData.filter(a => a.level === filter);
+  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.alertas({ status: 'ativo' })
+      .then(res => { if (!cancelled) setAlertas(res.data); })
+      .catch(() => { if (!cancelled) setError('Não foi possível carregar os alertas da API.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = filter === 'todos' ? alertas : alertas.filter(a => a.nivel === filter);
+
+  const summaryCards = useMemo(() => ([
+    { label: 'Críticos', count: alertas.filter(a => a.nivel === 'alto').length, color: '#d03b3b', bg: 'var(--danger-bg)', icon: AlertTriangle },
+    { label: 'Médios', count: alertas.filter(a => a.nivel === 'medio').length, color: '#eda100', bg: 'var(--warning-bg)', icon: Info },
+    { label: 'Baixos', count: alertas.filter(a => a.nivel === 'baixo').length, color: '#1baf7a', bg: 'var(--success-bg)', icon: CheckCircle },
+    { label: 'Total ativos', count: alertas.length, color: 'var(--text-primary)', bg: 'var(--bg-input)', icon: Bell },
+  ]), [alertas]);
 
   return (
     <>
@@ -53,7 +68,15 @@ export default function Alertas() {
           }
           noPad
         >
-          {filtered.map(a => (
+          {loading && (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Loader2 size={16} className="animate-spin" /> Carregando alertas...
+            </div>
+          )}
+          {!loading && error && (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: '#d03b3b', fontSize: 13 }}>{error}</div>
+          )}
+          {!loading && !error && filtered.map(a => (
             <div key={a.id} style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '12px 16px', borderTop: '1px solid var(--border)',
@@ -64,17 +87,19 @@ export default function Alertas() {
             >
               <span style={{
                 width: 8, height: 8, borderRadius: '50%',
-                background: a.level === 'alto' ? '#d03b3b' : a.level === 'medio' ? '#eda100' : '#1baf7a',
+                background: a.nivel === 'alto' ? '#d03b3b' : a.nivel === 'medio' ? '#eda100' : '#1baf7a',
                 flexShrink: 0,
               }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{a.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{a.region} · {a.time}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{a.titulo}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {a.municipio_nome || 'Sem município'} · {timeAgo(a.created_at)}
+                </div>
               </div>
-              <AlertBadge level={a.level as any} />
+              <AlertBadge level={a.nivel as any} />
             </div>
           ))}
-          {filtered.length === 0 && (
+          {!loading && !error && filtered.length === 0 && (
             <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
               Nenhum alerta encontrado para este filtro.
             </div>

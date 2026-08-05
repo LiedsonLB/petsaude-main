@@ -1,7 +1,9 @@
-import { Bell, Download, Filter, Moon, Sun, Search, User, Settings, HelpCircle, BellDot, LogOut } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Bell, Download, Filter, Moon, Sun, Search, User, Settings, HelpCircle, BellDot, LogOut, MapPin, Users as UsersIcon } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { api, type Alerta, type Municipio, type Pesquisador } from '../lib/api';
+import { timeAgo } from '../lib/timeAgo';
 
 interface Props {
   title?: string;
@@ -24,12 +26,42 @@ const routeTitles: Record<string, { title: string; subtitle: string }> = {
 export default function Topbar({ title: propTitle, subtitle: propSubtitle }: Props) {
   const { theme, toggle } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  // ── Busca global (dados reais, carregados uma vez e filtrados no cliente) ──
+  const [municipiosBusca, setMunicipiosBusca] = useState<Municipio[]>([]);
+  const [pesquisadoresBusca, setPesquisadoresBusca] = useState<Pesquisador[]>([]);
+  useEffect(() => {
+    api.municipios().then(res => setMunicipiosBusca(res.data)).catch(() => {});
+    api.pesquisadores().then(res => setPesquisadoresBusca(res.data)).catch(() => {});
+  }, []);
+
+  const resultadosBusca = useMemo(() => {
+    const termo = search.trim().toLowerCase();
+    if (termo.length < 2) return { municipios: [], pesquisadores: [] };
+    return {
+      municipios: municipiosBusca.filter(m => m.nome.toLowerCase().includes(termo)).slice(0, 4),
+      pesquisadores: pesquisadoresBusca.filter(p => p.nome.toLowerCase().includes(termo)).slice(0, 4),
+    };
+  }, [search, municipiosBusca, pesquisadoresBusca]);
+
+  const buscaTemResultados = resultadosBusca.municipios.length > 0 || resultadosBusca.pesquisadores.length > 0;
+
+  // ── Notificações reais (alertas ativos mais recentes) ──
+  const [notificacoes, setNotificacoes] = useState<Alerta[]>([]);
+  useEffect(() => {
+    api.alertas({ status: 'ativo' })
+      .then(res => setNotificacoes(
+        [...res.data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
+      ))
+      .catch(() => setNotificacoes([]));
+  }, []);
 
   const routeInfo = routeTitles[location.pathname] || {
     title: 'Página',
@@ -115,50 +147,97 @@ export default function Topbar({ title: propTitle, subtitle: propSubtitle }: Pro
       </div>
 
       {/* Barra de Pesquisa */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: isSearchFocused ? 'var(--bg-input, #f9fafb)' : 'var(--bg-input, #f9fafb)',
-        border: `1px solid ${isSearchFocused ? 'var(--primary, #2563eb)' : 'var(--border, #e5e7eb)'}`,
-        borderRadius: '10px',
-        padding: '6px 14px',
-        width: '240px',
-        transition: 'all 0.2s ease',
-        boxShadow: isSearchFocused ? '0 0 0 3px rgba(37, 99, 235, 0.1)' : 'none',
-      }}>
-        <Search size={16} color="var(--text-muted, #6b7280)" aria-hidden="true" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          onFocus={() => setIsSearchFocused(true)}
-          onBlur={() => setIsSearchFocused(false)}
-          placeholder="Buscar região, doença..."
-          style={{
-            border: 'none',
-            background: 'transparent',
-            outline: 'none',
-            fontSize: '13px',
-            color: 'var(--text-primary, #111827)',
-            width: '100%',
-            padding: '4px 0',
-          }}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
+      <div style={{ position: 'relative', width: '260px' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'var(--bg-input, #f9fafb)',
+          border: `1px solid ${isSearchFocused ? 'var(--primary, #2563eb)' : 'var(--border, #e5e7eb)'}`,
+          borderRadius: '10px',
+          padding: '6px 14px',
+          width: '100%',
+          transition: 'all 0.2s ease',
+          boxShadow: isSearchFocused ? '0 0 0 3px rgba(37, 99, 235, 0.1)' : 'none',
+        }}>
+          <Search size={16} color="var(--text-muted, #6b7280)" aria-hidden="true" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setTimeout(() => setIsSearchFocused(false), 150)}
+            placeholder="Buscar município, pesquisador..."
             style={{
               border: 'none',
               background: 'transparent',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '2px',
-              display: 'flex',
-              alignItems: 'center',
+              outline: 'none',
+              fontSize: '13px',
+              color: 'var(--text-primary, #111827)',
+              width: '100%',
+              padding: '4px 0',
             }}
-          >
-            ✕
-          </button>
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Dropdown de resultados da busca */}
+        {isSearchFocused && search.trim().length >= 2 && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 8px)', left: 0, width: '100%', minWidth: 280,
+            background: 'var(--bg-sidebar, #ffffff)', border: '1px solid var(--border, #e5e7eb)',
+            borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden', zIndex: 100,
+          }}>
+            {!buscaTemResultados && (
+              <div style={{ padding: '14px 16px', fontSize: 12, color: 'var(--text-muted)' }}>Nenhum resultado para "{search}".</div>
+            )}
+            {resultadosBusca.municipios.length > 0 && (
+              <div>
+                <div style={{ padding: '8px 16px 4px', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Municípios</div>
+                {resultadosBusca.municipios.map(m => (
+                  <div key={m.id} onClick={() => { navigate('/mapa'); setSearch(''); }} style={{
+                    padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)',
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <MapPin size={13} color="var(--text-muted)" /> {m.nome}
+                    <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{m.risco_nivel}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {resultadosBusca.pesquisadores.length > 0 && (
+              <div>
+                <div style={{ padding: '8px 16px 4px', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pesquisadores</div>
+                {resultadosBusca.pesquisadores.map(p => (
+                  <div key={p.id} onClick={() => { navigate('/pesquisadores'); setSearch(''); }} style={{
+                    padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)',
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <UsersIcon size={13} color="var(--text-muted)" /> {p.nome}
+                    <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)' }}>{p.perfil}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -259,14 +338,17 @@ export default function Topbar({ title: propTitle, subtitle: propSubtitle }: Pro
                 </span>
               </div>
               <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                {[
-                  { title: 'Novo alerta de dengue', time: 'Há 5 min', type: 'danger' },
-                  { title: 'Dados atualizados', time: 'Há 1 hora', type: 'info' },
-                  { title: 'Relatório mensal gerado', time: 'Há 3 horas', type: 'success' },
-                ].map((notif, i) => (
-                  <div key={i} style={{
+                {notificacoes.length === 0 && (
+                  <div style={{ padding: '16px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Nenhum alerta ativo no momento.
+                  </div>
+                )}
+                {notificacoes.map((notif, i) => (
+                  <div key={notif.id}
+                    onClick={() => { navigate('/alertas'); setShowNotifications(false); }}
+                    style={{
                     padding: '12px 16px',
-                    borderBottom: i < 2 ? '1px solid var(--border)' : 'none',
+                    borderBottom: i < notificacoes.length - 1 ? '1px solid var(--border)' : 'none',
                     cursor: 'pointer',
                     transition: 'background 0.2s',
                   }}
@@ -274,11 +356,11 @@ export default function Topbar({ title: propTitle, subtitle: propSubtitle }: Pro
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <BellDot size={14} color={notif.type === 'danger' ? 'var(--danger)' : 'var(--primary)'} />
-                      <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{notif.title}</span>
+                      <BellDot size={14} color={notif.nivel === 'alto' ? 'var(--danger)' : 'var(--primary)'} />
+                      <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{notif.titulo}</span>
                     </div>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '22px' }}>
-                      {notif.time}
+                      {notif.municipio_nome ? `${notif.municipio_nome} · ` : ''}{timeAgo(notif.created_at)}
                     </span>
                   </div>
                 ))}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/petsaude/import-service/geocoder"
 	"strconv"
 	"strings"
 	"time"
@@ -221,6 +222,36 @@ func (r *Repository) CommitSession(ctx context.Context, sessionID string) error 
 	return err
 }
 
+// ── Histórico de importações (tela Relatórios) ───────────────────
+func (r *Repository) ListDatasets(ctx context.Context, limit int) ([]models.Dataset, error) {
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	rows, err := r.db.Query(ctx, `
+		SELECT id, session_id, nome_arquivo, tipo, tamanho_bytes, registros, registros_invalidos, status, COALESCE(mensagem_erro,''), created_at
+		FROM datasets_importados
+		ORDER BY created_at DESC
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list datasets: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.Dataset
+	for rows.Next() {
+		var d models.Dataset
+		if err := rows.Scan(&d.ID, &d.SessionID, &d.NomeArquivo, &d.Tipo, &d.TamanhoBytes, &d.Registros, &d.RegistrosInvalidos, &d.Status, &d.MensagemErro, &d.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	if out == nil {
+		out = []models.Dataset{}
+	}
+	return out, nil
+}
+
 func (r *Repository) MarkDatasetError(ctx context.Context, datasetID, msg string) {
 	_, _ = r.db.Exec(ctx, `UPDATE datasets_importados SET status = 'erro', mensagem_erro = $2, updated_at = NOW() WHERE id = $1`, datasetID, msg)
 }
@@ -229,15 +260,49 @@ func (r *Repository) MarkDatasetError(ctx context.Context, datasetID, msg string
 // para não travar a importação de um dataset por causa de um município novo/digitação diferente.
 func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome string) (string, error) {
 	nome = strings.TrimSpace(nome)
+	nome = strings.ReplaceAll(nome, "-PI", "")
+	nome = strings.ReplaceAll(nome, "/PI", "")
+
+	fmt.Printf("Procurando município: '%s'\n", nome)
+
 	if nome == "" {
 		return "", fmt.Errorf("município vazio")
 	}
 	var id string
-	err := tx.QueryRow(ctx, `SELECT id FROM municipios WHERE LOWER(nome) = LOWER($1) LIMIT 1`, nome).Scan(&id)
+	err := tx.QueryRow(
+		ctx,
+		`SELECT id FROM municipios WHERE LOWER(nome)=LOWER($1) LIMIT 1`,
+		nome,
+	).Scan(&id)
+
 	if err == nil {
 		return id, nil
 	}
-	err = tx.QueryRow(ctx, `INSERT INTO municipios (id, nome) VALUES ($1, $2) RETURNING id`, uuid.NewString(), nome).Scan(&id)
+
+	if err != pgx.ErrNoRows {
+		return "", err
+	}
+	lat, lon, err := geocoder.Buscar(nome)
+	if err != nil {
+		lat = 0
+		lon = 0
+	}
+
+	err = tx.QueryRow(ctx, `
+	INSERT INTO municipios (
+		id,
+		nome,
+		lat,
+		lng
+	)
+	VALUES ($1,$2,$3,$4)
+	RETURNING id
+	`,
+		uuid.NewString(),
+		nome,
+		lat,
+		lon,
+	).Scan(&id)
 	return id, err
 }
 

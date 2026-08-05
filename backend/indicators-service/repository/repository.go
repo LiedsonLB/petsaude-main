@@ -211,8 +211,49 @@ func (r *Repository) ListAlertas(ctx context.Context, status, nivel string) ([]m
 }
 
 // ── Municípios ────────────────────────────────────────────────────
+//
+// Regra de classificação de risco (ajustável — ver classificarRisco):
+// combina a incidência epidemiológica somada de todos os agravos na
+// competência mais recente (já normalizada por 100k habitantes, então
+// comparável entre municípios de tamanhos diferentes) com a média mais
+// recente do índice de vulnerabilidade (0-100, quando existir).
+//
+//	alto:  incidência >= 500 /100k  OU  vulnerabilidade média >= 65
+//	médio: incidência >= 200 /100k  OU  vulnerabilidade média >= 40
+//	baixo: caso contrário
+func classificarRisco(incidencia, vulnerabilidadeMedia float64) string {
+	switch {
+	case incidencia >= 500 || vulnerabilidadeMedia >= 65:
+		return "alto"
+	case incidencia >= 200 || vulnerabilidadeMedia >= 40:
+		return "medio"
+	default:
+		return "baixo"
+	}
+}
+
 func (r *Repository) ListMunicipios(ctx context.Context) ([]models.Municipio, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, nome, uf, COALESCE(codigo_ibge,''), COALESCE(lat,0), COALESCE(lng,0), COALESCE(populacao,0) FROM municipios ORDER BY nome`)
+	rows, err := r.db.Query(ctx, `
+		SELECT
+			m.id, m.nome, m.uf, COALESCE(m.codigo_ibge,''), COALESCE(m.lat,0), COALESCE(m.lng,0), COALESCE(m.populacao,0),
+			COALESCE(epi.casos_total, 0),
+			COALESCE(epi.incidencia_total, 0),
+			COALESCE(vul.media, 0)
+		FROM municipios m
+		LEFT JOIN LATERAL (
+			SELECT SUM(e.casos) AS casos_total, SUM(e.incidencia_100k) AS incidencia_total
+			FROM indicadores_epidemiologicos e
+			WHERE e.municipio_id = m.id
+			  AND e.competencia = (SELECT MAX(e2.competencia) FROM indicadores_epidemiologicos e2 WHERE e2.municipio_id = m.id)
+		) epi ON true
+		LEFT JOIN LATERAL (
+			SELECT AVG(v.valor) AS media
+			FROM indices_vulnerabilidade v
+			WHERE v.municipio_id = m.id
+			  AND v.competencia = (SELECT MAX(v2.competencia) FROM indices_vulnerabilidade v2 WHERE v2.municipio_id = m.id)
+		) vul ON true
+		ORDER BY m.nome
+	`)
 	if err != nil {
 		return nil, fmt.Errorf("list municipios: %w", err)
 	}
@@ -221,15 +262,189 @@ func (r *Repository) ListMunicipios(ctx context.Context) ([]models.Municipio, er
 	var out []models.Municipio
 	for rows.Next() {
 		var m models.Municipio
-		if err := rows.Scan(&m.ID, &m.Nome, &m.UF, &m.CodigoIBGE, &m.Lat, &m.Lng, &m.Populacao); err != nil {
+		if err := rows.Scan(&m.ID, &m.Nome, &m.UF, &m.CodigoIBGE, &m.Lat, &m.Lng, &m.Populacao,
+			&m.CasosRecentes, &m.IncidenciaRecente, &m.VulnerabilidadeMedia); err != nil {
 			return nil, err
 		}
+		m.RiscoNivel = classificarRisco(m.IncidenciaRecente, m.VulnerabilidadeMedia)
 		out = append(out, m)
 	}
 	if out == nil {
 		out = []models.Municipio{}
 	}
 	return out, nil
+}
+
+// ── Série mensal (para os gráficos de Análise/Dashboard) ─────────
+// Agrega casos por competência+agravo (todos os municípios somados,
+// ou um único município se informado) e cruza com a chuva média do
+// mesmo mês. Não depende de nenhuma tabela nova: é derivada de
+// indicadores_epidemiologicos + indicadores_climaticos.
+func (r *Repository) ListSerieMensal(ctx context.Context, municipioID string, meses int) ([]models.SerieMensalPonto, error) {
+	if meses < 1 || meses > 36 {
+		meses = 12
+	}
+
+	epiArgs := []any{}
+	epiWhere := ""
+	if municipioID != "" {
+		epiWhere = "WHERE municipio_id = $1"
+		epiArgs = append(epiArgs, municipioID)
+	}
+	epiRows, err := r.db.Query(ctx, fmt.Sprintf(`
+		SELECT TO_CHAR(competencia,'YYYY-MM-01') AS comp, agravo, SUM(casos)
+		FROM indicadores_epidemiologicos
+		%s
+		GROUP BY comp, agravo
+		ORDER BY comp ASC
+	`, epiWhere), epiArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("serie mensal epi: %w", err)
+	}
+	defer epiRows.Close()
+
+	pontos := map[string]*models.SerieMensalPonto{}
+	ordem := []string{}
+	for epiRows.Next() {
+		var comp, agravo string
+		var casos int
+		if err := epiRows.Scan(&comp, &agravo, &casos); err != nil {
+			return nil, err
+		}
+		p, ok := pontos[comp]
+		if !ok {
+			p = &models.SerieMensalPonto{Competencia: comp, Mes: mesLabel(comp), Agravos: map[string]int{}}
+			pontos[comp] = p
+			ordem = append(ordem, comp)
+		}
+		p.Agravos[agravo] = casos
+	}
+
+	climaArgs := []any{}
+	climaWhere := ""
+	if municipioID != "" {
+		climaWhere = "WHERE municipio_id = $1"
+		climaArgs = append(climaArgs, municipioID)
+	}
+	climaRows, err := r.db.Query(ctx, fmt.Sprintf(`
+		SELECT TO_CHAR(date_trunc('month', data_ref),'YYYY-MM-01') AS comp, AVG(chuva_mm)
+		FROM indicadores_climaticos
+		%s
+		GROUP BY comp
+		ORDER BY comp ASC
+	`, climaWhere), climaArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("serie mensal clima: %w", err)
+	}
+	defer climaRows.Close()
+
+	for climaRows.Next() {
+		var comp string
+		var chuva float64
+		if err := climaRows.Scan(&comp, &chuva); err != nil {
+			return nil, err
+		}
+		p, ok := pontos[comp]
+		if !ok {
+			p = &models.SerieMensalPonto{Competencia: comp, Mes: mesLabel(comp), Agravos: map[string]int{}}
+			pontos[comp] = p
+			ordem = append(ordem, comp)
+		}
+		p.ChuvaMM = chuva
+	}
+
+	out := make([]models.SerieMensalPonto, 0, len(ordem))
+	for _, comp := range ordem {
+		out = append(out, *pontos[comp])
+	}
+	if len(out) > meses {
+		out = out[len(out)-meses:]
+	}
+	return out, nil
+}
+
+var mesesPt = [...]string{"Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"}
+
+func mesLabel(comp string) string {
+	// comp no formato YYYY-MM-01
+	if len(comp) < 7 {
+		return comp
+	}
+	ano := comp[2:4]
+	mesNum := comp[5:7]
+	idx := 0
+	fmt.Sscanf(mesNum, "%d", &idx)
+	if idx < 1 || idx > 12 {
+		return comp
+	}
+	return fmt.Sprintf("%s/%s", mesesPt[idx-1], ano)
+}
+
+// ── Conteúdos de orientação (plataforma de prevenção) ────────────
+func (r *Repository) ListConteudos(ctx context.Context, tipo, doenca, status string) ([]models.ConteudoOrientacao, error) {
+	conditions := []string{"1=1"}
+	args := []any{}
+	i := 1
+	if tipo != "" {
+		conditions = append(conditions, fmt.Sprintf("tipo = $%d", i))
+		args = append(args, tipo)
+		i++
+	}
+	if doenca != "" {
+		conditions = append(conditions, fmt.Sprintf("doenca ILIKE $%d", i))
+		args = append(args, "%"+doenca+"%")
+		i++
+	}
+	if status == "" {
+		status = "publicado"
+	}
+	conditions = append(conditions, fmt.Sprintf("status = $%d", i))
+	args = append(args, status)
+
+	query := fmt.Sprintf(`
+		SELECT id, titulo, tipo, COALESCE(doenca,''), COALESCE(resumo,''), COALESCE(corpo,''),
+		       COALESCE(url,''), autor_nome, COALESCE(autor_perfil,''), status, created_at
+		FROM conteudos_orientacao
+		WHERE %s
+		ORDER BY created_at DESC
+	`, strings.Join(conditions, " AND "))
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list conteudos: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.ConteudoOrientacao
+	for rows.Next() {
+		var c models.ConteudoOrientacao
+		if err := rows.Scan(&c.ID, &c.Titulo, &c.Tipo, &c.Doenca, &c.Resumo, &c.Corpo, &c.URL, &c.AutorNome, &c.AutorPerfil, &c.Status, &c.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	if out == nil {
+		out = []models.ConteudoOrientacao{}
+	}
+	return out, nil
+}
+
+func (r *Repository) CreateConteudo(ctx context.Context, c models.ConteudoOrientacao) (models.ConteudoOrientacao, error) {
+	if c.Status == "" {
+		c.Status = "publicado"
+	}
+	if c.Tipo == "" {
+		c.Tipo = "dica"
+	}
+	err := r.db.QueryRow(ctx, `
+		INSERT INTO conteudos_orientacao (titulo, tipo, doenca, resumo, corpo, url, autor_nome, autor_perfil, status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		RETURNING id, created_at
+	`, c.Titulo, c.Tipo, c.Doenca, c.Resumo, c.Corpo, c.URL, c.AutorNome, c.AutorPerfil, c.Status).Scan(&c.ID, &c.CreatedAt)
+	if err != nil {
+		return c, fmt.Errorf("create conteudo: %w", err)
+	}
+	return c, nil
 }
 
 // ── GATs / Pesquisadores ─────────────────────────────────────────
@@ -298,10 +513,28 @@ func (r *Repository) DashboardKPIs(ctx context.Context) (*models.DashboardKPIs, 
 		return nil, fmt.Errorf("kpi casos: %w", err)
 	}
 
+	// Delta vs. a competência imediatamente anterior (para a setinha de tendência).
+	var casosAnterior int
+	_ = r.db.QueryRow(ctx, `
+		SELECT COALESCE(SUM(casos),0) FROM indicadores_epidemiologicos
+		WHERE competencia = (
+			SELECT MAX(competencia) FROM indicadores_epidemiologicos
+			WHERE competencia < (SELECT MAX(competencia) FROM indicadores_epidemiologicos)
+		)
+	`).Scan(&casosAnterior)
+	if casosAnterior > 0 {
+		k.CasosNotificadosDeltaPct = (float64(k.CasosNotificados) - float64(casosAnterior)) / float64(casosAnterior) * 100
+	}
+
 	err = r.db.QueryRow(ctx, `SELECT COUNT(DISTINCT municipio_id) FROM alertas WHERE status = 'ativo'`).Scan(&k.MunicipiosEmAlerta)
 	if err != nil {
 		return nil, fmt.Errorf("kpi alertas: %w", err)
 	}
+
+	_ = r.db.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT municipio_id) FROM alertas
+		WHERE status = 'ativo' AND created_at >= NOW() - INTERVAL '7 days'
+	`).Scan(&k.MunicipiosEmAlertaNovos)
 
 	err = r.db.QueryRow(ctx, `
 		SELECT COALESCE(AVG(chuva_mm),0) FROM indicadores_climaticos

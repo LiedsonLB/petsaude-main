@@ -13,6 +13,10 @@ services:
         paths: ["/api/indicadores/climaticos"]
         methods: ["GET", "OPTIONS"]
         strip_path: false
+      - name: indicadores-serie-mensal
+        paths: ["/api/indicadores/serie-mensal"]
+        methods: ["GET", "OPTIONS"]
+        strip_path: false
       - name: vulnerabilidade
         paths: ["/api/vulnerabilidade"]
         methods: ["GET", "OPTIONS"]
@@ -37,21 +41,24 @@ services:
         paths: ["/api/dashboard/kpis"]
         methods: ["GET", "OPTIONS"]
         strip_path: false
+      - name: conteudos
+        paths: ["/api/conteudos"]
+        methods: ["GET", "POST", "OPTIONS"]
+        strip_path: false
 
   - name: import-service
     url: http://import-service:8081
+
     routes:
-      - name: import-sessions
-        paths: ["/api/import/sessions"]
-        methods: ["POST", "OPTIONS"]
-        strip_path: false
-      - name: import-sessions-detail
-        paths: ["/api/import/sessions/(.+)"]
-        methods: ["GET", "POST", "OPTIONS"]
-        strip_path: false
-      - name: import-datasets-detail
-        paths: ["/api/import/datasets/(.+)"]
-        methods: ["GET", "POST", "OPTIONS"]
+      - name: import-api
+        paths:
+          - /api/import
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
         strip_path: false
 
   - name: search-service

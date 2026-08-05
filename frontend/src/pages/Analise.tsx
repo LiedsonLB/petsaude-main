@@ -1,11 +1,17 @@
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter } from 'recharts';
 import { TrendingUp } from 'lucide-react';
-import { monthlyData } from '../data/Data';
+import { useEffect, useMemo, useState } from 'react';
+import { api, type Municipio } from '../lib/api';
 import { useTheme } from '../contexts/ThemeContext';
 import Topbar from '../components/Topbar';
 import Card from '../components/Card';
 
-const correlationData = monthlyData.map(d => ({ chuva: d.chuva, dengue: d.dengue, mes: d.mes }));
+interface PontoGrafico {
+    mes: string;
+    dengue: number;
+    leptospirose: number;
+    chuva: number;
+}
 
 export default function Analise() {
     const { theme } = useTheme();
@@ -14,29 +20,71 @@ export default function Analise() {
     const gridColor = isDark ? '#2a3a36' : '#e0e8e5';
     const tt = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 };
 
+    const [municipios, setMunicipios] = useState<Municipio[]>([]);
+    const [municipioId, setMunicipioId] = useState<string>(''); // '' = todos os municípios (agregado estadual)
+    const [pontos, setPontos] = useState<PontoGrafico[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.municipios().then(res => setMunicipios(res.data)).catch(() => setMunicipios([]));
+    }, []);
+
+    useEffect(() => {
+        setLoading(true);
+        api.serieMensal({ municipio_id: municipioId, meses: 12 })
+            .then(res => {
+                setPontos(res.data.map(p => ({
+                    mes: p.mes,
+                    dengue: p.agravos['dengue'] || 0,
+                    leptospirose: p.agravos['leptospirose'] || 0,
+                    chuva: p.chuva_mm,
+                })));
+            })
+            .catch(() => setPontos([]))
+            .finally(() => setLoading(false));
+    }, [municipioId]);
+
+    const correlationData = useMemo(() => pontos.map(d => ({ chuva: d.chuva, dengue: d.dengue, mes: d.mes })), [pontos]);
+
     return (
         <>
             <Topbar title="Análise Temporal" subtitle="Correlação entre clima e incidência de doenças ao longo do tempo" />
             <main style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
 
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Município:</span>
+                    <select
+                        value={municipioId}
+                        onChange={e => setMunicipioId(e.target.value)}
+                        style={{
+                            padding: '6px 10px', borderRadius: 8, fontSize: 12,
+                            border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)',
+                        }}
+                    >
+                        <option value="">Todos (agregado estadual)</option>
+                        {municipios.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                    </select>
+                    {loading && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Carregando...</span>}
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <Card title="Série Temporal de Casos" icon={<TrendingUp size={15} />}>
                         <ResponsiveContainer width="100%" height={220}>
-                            <LineChart data={monthlyData}>
+                            <LineChart data={pontos}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                                 <XAxis dataKey="mes" tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                                 <Tooltip contentStyle={tt} labelStyle={{ color: 'var(--text-primary)', fontWeight: 600 }} />
                                 <Legend wrapperStyle={{ fontSize: 11 }} />
                                 <Line type="monotone" dataKey="dengue" stroke="#2a78d6" strokeWidth={2} dot={{ r: 3 }} name="Dengue" />
-                                <Line type="monotone" dataKey="lepto" stroke="#eb6834" strokeWidth={2} dot={{ r: 3 }} name="Leptospirose" />
+                                <Line type="monotone" dataKey="leptospirose" stroke="#eb6834" strokeWidth={2} dot={{ r: 3 }} name="Leptospirose" />
                             </LineChart>
                         </ResponsiveContainer>
                     </Card>
 
                     <Card title="Precipitação Mensal (mm)">
                         <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={monthlyData}>
+                            <BarChart data={pontos}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                                 <XAxis dataKey="mes" tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
@@ -70,16 +118,16 @@ export default function Analise() {
                     </ResponsiveContainer>
                 </Card>
 
-                <Card title="Comparação Interanual">
+                <Card title="Comparação Dengue × Leptospirose">
                     <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={monthlyData}>
+                        <BarChart data={pontos}>
                             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                             <XAxis dataKey="mes" tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                             <YAxis tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                             <Tooltip contentStyle={tt} />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Bar dataKey="dengue" name="Dengue 2026-25" fill="#2a78d6" radius={[3, 3, 0, 0]} barSize={12} />
-                            <Bar dataKey="lepto" name="Leptospirose 2026-25" fill="#eb6834" radius={[3, 3, 0, 0]} barSize={12} />
+                            <Bar dataKey="dengue" name="Dengue" fill="#2a78d6" radius={[3, 3, 0, 0]} barSize={12} />
+                            <Bar dataKey="leptospirose" name="Leptospirose" fill="#eb6834" radius={[3, 3, 0, 0]} barSize={12} />
                         </BarChart>
                     </ResponsiveContainer>
                 </Card>

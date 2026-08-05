@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -105,6 +106,8 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("HEADERS = %#v\n", sheet.Headers)
+
 	tipo, err := parser.DetectType(sheet.Headers)
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, err.Error())
@@ -184,6 +187,19 @@ func (h *Handler) CommitDataset(w http.ResponseWriter, r *http.Request) {
 		"registros_gravados": gravados,
 		"status":          "processado",
 	})
+}
+
+// GET /api/import/datasets?limit= — histórico de todas as importações
+// (usado pela tela Relatórios, que hoje passa a mostrar dados reais em
+// vez do array uploadedDatasets que existia hardcoded no frontend).
+func (h *Handler) ListDatasets(w http.ResponseWriter, r *http.Request) {
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	items, err := h.repo.ListDatasets(r.Context(), limit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "falha ao listar histórico de importações")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": items})
 }
 
 // POST /api/import/sessions/{sessionID}/commit — fecha a sessão depois que

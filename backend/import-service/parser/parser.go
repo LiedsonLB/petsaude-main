@@ -50,9 +50,15 @@ func ReadXLSX(r io.Reader) (*ParsedSheet, error) {
 
 func normalizeHeaders(h []string) []string {
 	out := make([]string, len(h))
+
 	for i, v := range h {
-		out[i] = strings.ToLower(strings.TrimSpace(v))
+		v = strings.ReplaceAll(v, "\uFEFF", "")
+		v = strings.TrimSpace(v)
+		v = strings.ToLower(v)
+
+		out[i] = v
 	}
+
 	return out
 }
 
@@ -64,23 +70,33 @@ var tipoAssinaturas = map[string][]string{
 }
 
 func DetectType(headers []string) (string, error) {
-	set := map[string]bool{}
+	set := make(map[string]bool)
+
 	for _, h := range headers {
+		h = strings.ReplaceAll(h, "\uFEFF", "")
+		h = strings.TrimSpace(strings.ToLower(h))
 		set[h] = true
 	}
+
 	for tipo, required := range tipoAssinaturas {
 		ok := true
+
 		for _, col := range required {
 			if !set[col] {
 				ok = false
 				break
 			}
 		}
+
 		if ok {
 			return tipo, nil
 		}
 	}
-	return "", fmt.Errorf("não foi possível identificar o tipo de planilha pelas colunas: %s (esperado: municipio+agravo+competencia+casos para epidemiológico, municipio+data+chuva_mm para climático, ou municipio+dimensao+valor para vulnerabilidade)", strings.Join(headers, ", "))
+
+	return "", fmt.Errorf(
+		"não foi possível identificar o tipo de planilha pelas colunas: %s",
+		strings.Join(headers, ", "),
+	)
 }
 
 // Row é uma linha já convertida para map[coluna]valor + validação.

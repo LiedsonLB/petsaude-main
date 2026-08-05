@@ -72,6 +72,7 @@ func main() {
 	r.Get("/api/import/sessions/{sessionID}", h.GetSession)
 	r.Post("/api/import/sessions/{sessionID}/upload", h.Upload)
 	r.Post("/api/import/sessions/{sessionID}/commit", h.CommitSession)
+	r.Get("/api/import/datasets", h.ListDatasets)
 	r.Get("/api/import/datasets/{datasetID}/preview", h.Preview)
 	r.Post("/api/import/datasets/{datasetID}/commit", h.CommitDataset)
 
