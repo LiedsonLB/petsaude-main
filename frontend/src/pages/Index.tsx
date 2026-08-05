@@ -369,7 +369,7 @@ export default function LandingPage() {
         <div className="max-w-[90%] w-full mx-auto px-6">
           <div className="glass-card rounded-2xl p-8 flex flex-col items-center gap-6 max-w-5xl mx-auto border-white/60">
             <h2 className="text-xs font-medium text-[#3e4947]/60 uppercase tracking-[0.2em]">Instituições Parceiras</h2>
-            <div className="flex flex-wrap justify-center items-center gap-8 lg:gap-10 opacity-60 grayscale hover:grayscale-0 transition-all duration-700">
+            <div className="flex flex-wrap justify-center items-center gap-8 lg:gap-10 opacity-60 transition-all duration-700">
               {partners.map((partner) => (
                 <div key={partner.name} className="h-12 w-32 flex items-center justify-center hover:scale-105 transition-transform">
                   {partner.hasImage && partner.image ? (
