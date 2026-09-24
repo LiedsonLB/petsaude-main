@@ -301,54 +301,73 @@ func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome strin
 		return "", 0, err
 	}
 
-	lat, lon, err := geocoder.Buscar(nome)
+	// Município não existe — busca informações via geocoder
+	info, err := geocoder.Buscar(nome)
 	if err != nil {
 		fmt.Printf("❌ Erro no geocoder.Buscar: %v\n", err)
-		
-		// Fallback: só lat/lon
+
+		// Fallback: só lat/lon via Nominatim
 		lat, lon, err2 := geocoder.BuscarNominatim(nome)
 		if err2 != nil {
 			fmt.Printf("❌ Erro no fallback Nominatim: %v\n", err2)
 			lat, lon = 0, 0
 		}
-		
+
 		fmt.Printf("📍 Fallback: lat=%f, lon=%f\n", lat, lon)
-		
-		err = tx.QueryRow(ctx, `
+
+		insertErr := tx.QueryRow(ctx, `
 			INSERT INTO municipios (id, nome, uf, lat, lng)
 			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id
 		`, uuid.NewString(), nome, "PI", lat, lon).Scan(&id)
-		
-		if err != nil {
-			fmt.Printf("❌ Erro ao inserir fallback: %v\n", err)
-			return "", err
+
+		if insertErr != nil {
+			fmt.Printf("❌ Erro ao inserir fallback: %v\n", insertErr)
+			return "", 0, insertErr
 		}
-		
+
 		fmt.Printf("✅ Município criado via fallback: %s (ID: %s)\n", nome, id)
-		return id, nil
+		return id, 0, nil
 	}
 
-	populacao, _ := strconv.Atoi(strings.TrimSpace(populacaoStr)) // vira 0 se vazio/inválido
+	// Preferência: população da planilha; se vazia/inválida, usa a do IBGE (via geocoder)
+	populacao, convErr := strconv.Atoi(strings.TrimSpace(populacaoStr))
+	if convErr != nil || populacao <= 0 {
+		populacao = info.Populacao
+	}
 
-	err = tx.QueryRow(ctx, `
-	INSERT INTO municipios (
-		id,
-		nome,
-		lat,
-		lng,
-		populacao
-	)
-	VALUES ($1,$2,$3,$4,$5)
-	RETURNING id
+	uf := info.UF
+	if uf == "" {
+		uf = "PI"
+	}
+
+	insertErr := tx.QueryRow(ctx, `
+		INSERT INTO municipios (
+			id,
+			nome,
+			uf,
+			lat,
+			lng,
+			populacao
+		)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		RETURNING id
 	`,
 		uuid.NewString(),
 		nome,
-		lat,
-		lon,
+		uf,
+		info.Lat,
+		info.Lng,
 		populacao,
 	).Scan(&id)
-	return id, populacao, err
+
+	if insertErr != nil {
+		fmt.Printf("❌ Erro ao inserir município: %v\n", insertErr)
+		return "", 0, insertErr
+	}
+
+	fmt.Printf("✅ Município criado: %s (%s) — ID: %s, populacao=%d\n", nome, uf, id, populacao)
+	return id, populacao, nil
 }
 
 // normalizeDate aceita YYYY-MM-DD, YYYY-MM ou DD/MM/YYYY e retorna sempre YYYY-MM-DD.
