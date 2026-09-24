@@ -262,12 +262,14 @@ func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome strin
 	nome = strings.TrimSpace(nome)
 	nome = strings.ReplaceAll(nome, "-PI", "")
 	nome = strings.ReplaceAll(nome, "/PI", "")
-
-	fmt.Printf("Procurando município: '%s'\n", nome)
+	
+	fmt.Printf("🔍 ===== RESOLVENDO MUNICÍPIO: '%s' =====\n", nome)
 
 	if nome == "" {
 		return "", fmt.Errorf("município vazio")
 	}
+
+	// Primeiro tenta buscar no banco local
 	var id string
 	err := tx.QueryRow(
 		ctx,
@@ -276,34 +278,67 @@ func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome strin
 	).Scan(&id)
 
 	if err == nil {
+		fmt.Printf("✅ Município encontrado no banco: %s (ID: %s)\n", nome, id)
 		return id, nil
 	}
 
-	if err != pgx.ErrNoRows {
-		return "", err
-	}
-	lat, lon, err := geocoder.Buscar(nome)
+	fmt.Printf("⚠️ Município NÃO encontrado no banco. Buscando na API...\n")
+
+	// Se não encontrou, busca na API
+	info, err := geocoder.Buscar(nome)
 	if err != nil {
-		lat = 0
-		lon = 0
+		fmt.Printf("❌ Erro no geocoder.Buscar: %v\n", err)
+		
+		// Fallback: só lat/lon
+		lat, lon, err2 := geocoder.BuscarNominatim(nome)
+		if err2 != nil {
+			fmt.Printf("❌ Erro no fallback Nominatim: %v\n", err2)
+			lat, lon = 0, 0
+		}
+		
+		fmt.Printf("📍 Fallback: lat=%f, lon=%f\n", lat, lon)
+		
+		err = tx.QueryRow(ctx, `
+			INSERT INTO municipios (id, nome, uf, lat, lng)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		`, uuid.NewString(), nome, "PI", lat, lon).Scan(&id)
+		
+		if err != nil {
+			fmt.Printf("❌ Erro ao inserir fallback: %v\n", err)
+			return "", err
+		}
+		
+		fmt.Printf("✅ Município criado via fallback: %s (ID: %s)\n", nome, id)
+		return id, nil
 	}
 
+	fmt.Printf("📍 Info obtido: lat=%f, lon=%f, IBGE=%d, Pop=%d, UF=%s\n", 
+		info.Lat, info.Lng, info.CodigoIBGE, info.Populacao, info.UF)
+
+	// Insere com todos os dados
 	err = tx.QueryRow(ctx, `
-	INSERT INTO municipios (
-		id,
-		nome,
-		lat,
-		lng
-	)
-	VALUES ($1,$2,$3,$4)
-	RETURNING id
+		INSERT INTO municipios (
+			id, nome, uf, codigo_ibge, lat, lng, populacao
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
 	`,
 		uuid.NewString(),
-		nome,
-		lat,
-		lon,
+		info.Nome,
+		info.UF,
+		info.CodigoIBGE,
+		info.Lat,
+		info.Lng,
+		info.Populacao,
 	).Scan(&id)
-	return id, err
+
+	if err != nil {
+		fmt.Printf("❌ Erro ao inserir: %v\n", err)
+		return "", err
+	}
+
+	fmt.Printf("✅ Município criado com sucesso: %s (ID: %s)\n", nome, id)
+	return id, nil
 }
 
 // normalizeDate aceita YYYY-MM-DD, YYYY-MM ou DD/MM/YYYY e retorna sempre YYYY-MM-DD.
