@@ -157,7 +157,7 @@ func (r *Repository) CommitDataset(ctx context.Context, datasetID string) (tabel
 			continue
 		}
 
-		municipioID, err := r.resolveMunicipio(ctx, tx, data["municipio"])
+		municipioID, populacaoMunicipio, err := r.resolveMunicipio(ctx, tx, data["municipio"], data["populacao"])
 		if err != nil {
 			continue // linha órfã (município não cadastrado) — não derruba o commit inteiro
 		}
@@ -166,12 +166,18 @@ func (r *Repository) CommitDataset(ctx context.Context, datasetID string) (tabel
 		case "epidemiologico":
 			casos, _ := strconv.Atoi(data["casos"])
 			obitos, _ := strconv.Atoi(data["obitos"])
+
+			var incidencia100k float64
+			if populacaoMunicipio > 0 {
+				incidencia100k = (float64(casos) / float64(populacaoMunicipio)) * 100000
+			}
+
 			_, err = tx.Exec(ctx, `
-				INSERT INTO indicadores_epidemiologicos (municipio_id, agravo, competencia, casos, obitos, dataset_id)
-				VALUES ($1, $2, $3::date, $4, $5, $6)
+				INSERT INTO indicadores_epidemiologicos (municipio_id, agravo, competencia, casos, obitos, incidencia_100k, dataset_id)
+				VALUES ($1, $2, $3::date, $4, $5, $6, $7)
 				ON CONFLICT (municipio_id, agravo, competencia)
-				DO UPDATE SET casos = EXCLUDED.casos, obitos = EXCLUDED.obitos, dataset_id = EXCLUDED.dataset_id, updated_at = NOW()
-			`, municipioID, data["agravo"], normalizeDate(data["competencia"]), casos, obitos, datasetID)
+				DO UPDATE SET casos = EXCLUDED.casos, obitos = EXCLUDED.obitos, incidencia_100k = EXCLUDED.incidencia_100k, dataset_id = EXCLUDED.dataset_id, updated_at = NOW()
+			`, municipioID, data["agravo"], normalizeDate(data["competencia"]), casos, obitos, incidencia100k, datasetID)
 			tabelaAfetada = "indicadores_epidemiologicos"
 
 		case "climatico":
@@ -258,34 +264,44 @@ func (r *Repository) MarkDatasetError(ctx context.Context, datasetID, msg string
 
 // resolveMunicipio busca por nome (case-insensitive); cria o registro se não existir,
 // para não travar a importação de um dataset por causa de um município novo/digitação diferente.
-func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome string) (string, error) {
+// Retorna também a população vigente do município (recém-atualizada ou já existente),
+// usada para calcular incidencia_100k no commit.
+func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome string, populacaoStr string) (string, int, error) {
 	nome = strings.TrimSpace(nome)
 	nome = strings.ReplaceAll(nome, "-PI", "")
 	nome = strings.ReplaceAll(nome, "/PI", "")
-	
-	fmt.Printf("🔍 ===== RESOLVENDO MUNICÍPIO: '%s' =====\n", nome)
 
 	if nome == "" {
-		return "", fmt.Errorf("município vazio")
+		return "", 0, fmt.Errorf("município vazio")
 	}
 
 	// Primeiro tenta buscar no banco local
 	var id string
+	var populacaoAtual int
 	err := tx.QueryRow(
 		ctx,
-		`SELECT id FROM municipios WHERE LOWER(nome)=LOWER($1) LIMIT 1`,
+		`SELECT id, COALESCE(populacao,0) FROM municipios WHERE LOWER(nome)=LOWER($1) LIMIT 1`,
 		nome,
-	).Scan(&id)
+	).Scan(&id, &populacaoAtual)
 
 	if err == nil {
-		fmt.Printf("✅ Município encontrado no banco: %s (ID: %s)\n", nome, id)
-		return id, nil
+		// já existe — atualiza população só se veio um valor válido (> 0) na planilha
+		populacaoNova, convErr := strconv.Atoi(strings.TrimSpace(populacaoStr))
+		if convErr == nil && populacaoNova > 0 {
+			_, _ = tx.Exec(ctx,
+				`UPDATE municipios SET populacao = $1, updated_at = NOW() WHERE id = $2`,
+				populacaoNova, id,
+			)
+			populacaoAtual = populacaoNova
+		}
+		return id, populacaoAtual, nil
 	}
 
-	fmt.Printf("⚠️ Município NÃO encontrado no banco. Buscando na API...\n")
+	if err != pgx.ErrNoRows {
+		return "", 0, err
+	}
 
-	// Se não encontrou, busca na API
-	info, err := geocoder.Buscar(nome)
+	lat, lon, err := geocoder.Buscar(nome)
 	if err != nil {
 		fmt.Printf("❌ Erro no geocoder.Buscar: %v\n", err)
 		
@@ -313,32 +329,26 @@ func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome strin
 		return id, nil
 	}
 
-	fmt.Printf("📍 Info obtido: lat=%f, lon=%f, IBGE=%d, Pop=%d, UF=%s\n", 
-		info.Lat, info.Lng, info.CodigoIBGE, info.Populacao, info.UF)
+	populacao, _ := strconv.Atoi(strings.TrimSpace(populacaoStr)) // vira 0 se vazio/inválido
 
-	// Insere com todos os dados
 	err = tx.QueryRow(ctx, `
-		INSERT INTO municipios (
-			id, nome, uf, codigo_ibge, lat, lng, populacao
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id
+	INSERT INTO municipios (
+		id,
+		nome,
+		lat,
+		lng,
+		populacao
+	)
+	VALUES ($1,$2,$3,$4,$5)
+	RETURNING id
 	`,
 		uuid.NewString(),
-		info.Nome,
-		info.UF,
-		info.CodigoIBGE,
-		info.Lat,
-		info.Lng,
-		info.Populacao,
+		nome,
+		lat,
+		lon,
+		populacao,
 	).Scan(&id)
-
-	if err != nil {
-		fmt.Printf("❌ Erro ao inserir: %v\n", err)
-		return "", err
-	}
-
-	fmt.Printf("✅ Município criado com sucesso: %s (ID: %s)\n", nome, id)
-	return id, nil
+	return id, populacao, err
 }
 
 // normalizeDate aceita YYYY-MM-DD, YYYY-MM ou DD/MM/YYYY e retorna sempre YYYY-MM-DD.
