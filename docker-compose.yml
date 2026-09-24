@@ -9,14 +9,6 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: petsaude-postgres
-    # wal_level=logical é OBRIGATÓRIO para o Debezium criar o slot de
-    # replicação lógica. Antes isso era feito com "ALTER SYSTEM SET" dentro
-    # do script de init (001_init.sql) — mas ALTER SYSTEM só grava o
-    # postgresql.auto.conf, não reinicia o Postgres, e como o script de
-    # init roda no primeiro boot (antes de qualquer restart), o Postgres
-    # nunca chegava a subir com wal_level=logical de fato. Por isso o
-    # connector do Debezium falhava sempre. Usar `command` resolve isso,
-    # porque o Postgres já sobe com a flag certa desde o primeiro start.
     command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
     environment:
       POSTGRES_USER: petsaude

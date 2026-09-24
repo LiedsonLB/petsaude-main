@@ -274,6 +274,8 @@ func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome strin
 	if nome == "" {
 		return "", 0, fmt.Errorf("município vazio")
 	}
+
+	// Primeiro tenta buscar no banco local
 	var id string
 	var populacaoAtual int
 	err := tx.QueryRow(
@@ -301,8 +303,30 @@ func (r *Repository) resolveMunicipio(ctx context.Context, tx pgx.Tx, nome strin
 
 	lat, lon, err := geocoder.Buscar(nome)
 	if err != nil {
-		lat = 0
-		lon = 0
+		fmt.Printf("❌ Erro no geocoder.Buscar: %v\n", err)
+		
+		// Fallback: só lat/lon
+		lat, lon, err2 := geocoder.BuscarNominatim(nome)
+		if err2 != nil {
+			fmt.Printf("❌ Erro no fallback Nominatim: %v\n", err2)
+			lat, lon = 0, 0
+		}
+		
+		fmt.Printf("📍 Fallback: lat=%f, lon=%f\n", lat, lon)
+		
+		err = tx.QueryRow(ctx, `
+			INSERT INTO municipios (id, nome, uf, lat, lng)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		`, uuid.NewString(), nome, "PI", lat, lon).Scan(&id)
+		
+		if err != nil {
+			fmt.Printf("❌ Erro ao inserir fallback: %v\n", err)
+			return "", err
+		}
+		
+		fmt.Printf("✅ Município criado via fallback: %s (ID: %s)\n", nome, id)
+		return id, nil
 	}
 
 	populacao, _ := strconv.Atoi(strings.TrimSpace(populacaoStr)) // vira 0 se vazio/inválido
